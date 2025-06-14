@@ -24,6 +24,8 @@
   "devDependencies": {
     "@eslint/js": "^9.25.0",
     "@tanstack/react-query-devtools": "^5.17.0",
+    "@types/gapi": "^0.0.47",
+    "@types/google.accounts": "^0.0.16",
     "@types/node": "^20.10.6",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",

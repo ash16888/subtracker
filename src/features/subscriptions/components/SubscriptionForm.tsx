@@ -2,8 +2,10 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
+import { useState } from 'react'
 import { useCreateSubscription, useUpdateSubscription } from '../hooks/useSubscriptions'
 import { CATEGORIES } from '../../../types/subscription'
+import { useGoogleCalendar } from '../../calendar/hooks/useGoogleCalendar'
 import type { Database } from '../../../types/database.types'
 
 type Subscription = Database['public']['Tables']['subscriptions']['Row']
@@ -31,6 +33,16 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
   const createSubscription = useCreateSubscription()
   const updateSubscription = useUpdateSubscription()
   const isEditing = !!subscription
+  const [addToCalendar, setAddToCalendar] = useState(false)
+  const [calendarError, setCalendarError] = useState<string | null>(null)
+  
+  const {
+    isLoaded: isCalendarLoaded,
+    isSignedIn: isCalendarSignedIn,
+    requestCalendarAccess,
+    createSubscriptionReminder,
+    updateSubscriptionReminder,
+  } = useGoogleCalendar()
   
   const {
     register,
@@ -55,6 +67,35 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
 
   const onSubmit = async (data: FormData) => {
     try {
+      let calendarEventId: string | null = null;
+      
+      // Обработка Google Calendar
+      if (addToCalendar && isCalendarLoaded && isCalendarSignedIn) {
+        try {
+          if (isEditing && subscription.google_calendar_event_id) {
+            // Обновляем существующее событие
+            calendarEventId = await updateSubscriptionReminder(
+              subscription.google_calendar_event_id,
+              data.name,
+              Number(data.amount),
+              data.currency,
+              new Date(data.next_payment_date)
+            );
+          } else {
+            // Создаем новое событие
+            calendarEventId = await createSubscriptionReminder(
+              data.name,
+              Number(data.amount),
+              data.currency,
+              new Date(data.next_payment_date)
+            );
+          }
+        } catch (calError) {
+          console.error('Ошибка при работе с Google Calendar:', calError);
+          setCalendarError('Не удалось добавить событие в календарь');
+        }
+      }
+      
       if (isEditing) {
         await updateSubscription.mutateAsync({
           id: subscription.id,
@@ -65,6 +106,7 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
           next_payment_date: new Date(data.next_payment_date).toISOString(),
           category: data.category || null,
           url: data.url || null,
+          google_calendar_event_id: calendarEventId || subscription.google_calendar_event_id || null,
         })
       } else {
         await createSubscription.mutateAsync({
@@ -75,6 +117,7 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
           next_payment_date: new Date(data.next_payment_date).toISOString(),
           category: data.category || null,
           url: data.url || null,
+          google_calendar_event_id: calendarEventId,
         })
       }
       onClose()
@@ -210,6 +253,40 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
           />
           {errors.url && (
             <p className="mt-1 text-sm text-red-600">{errors.url.message}</p>
+          )}
+        </div>
+
+        <div className="border-t border-gray-200 pt-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="addToCalendar"
+                checked={addToCalendar}
+                onChange={(e) => setAddToCalendar(e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="addToCalendar" className="ml-2 block text-sm text-gray-700">
+                Добавить напоминание в Google Calendar (за 3 дня до платежа)
+              </label>
+            </div>
+            {addToCalendar && !isCalendarSignedIn && isCalendarLoaded && (
+              <button
+                type="button"
+                onClick={requestCalendarAccess}
+                className="text-sm text-blue-600 hover:text-blue-500"
+              >
+                Подключить календарь
+              </button>
+            )}
+          </div>
+          {calendarError && (
+            <p className="mt-2 text-sm text-red-600">{calendarError}</p>
+          )}
+          {isEditing && subscription.google_calendar_event_id && (
+            <p className="mt-2 text-sm text-gray-500">
+              ✓ Напоминание уже добавлено в календарь
+            </p>
           )}
         </div>
 
