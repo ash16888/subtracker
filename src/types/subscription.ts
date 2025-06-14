@@ -1,0 +1,27 @@
+import { z } from 'zod'
+
+export const subscriptionSchema = z.object({
+  id: z.string().uuid().optional(),
+  name: z.string().min(1, 'Name is required'),
+  amount: z.number().positive('Amount must be positive'),
+  currency: z.string().min(1, 'Currency is required'),
+  billing_period: z.enum(['monthly', 'yearly']),
+  next_payment_date: z.string().datetime(),
+  category: z.string().nullable().optional(),
+  url: z.string().url().nullable().optional(),
+  user_id: z.string().uuid().optional(),
+})
+
+export type Subscription = z.infer<typeof subscriptionSchema>
+
+export const CATEGORIES = [
+  'Мультисервис',
+  'Развлечения',
+  'Работа',
+  'ИИ',
+  'Игры',
+  'Связь',
+  'Другое',
+] as const
+
+export type Category = (typeof CATEGORIES)[number]
