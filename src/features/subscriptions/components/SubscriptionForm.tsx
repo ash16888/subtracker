@@ -2,10 +2,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
-import { useState } from 'react'
-import { useCreateSubscription, useUpdateSubscription } from '../hooks/useSubscriptions'
+import { useCreateSubscriptionWithCalendar, useUpdateSubscriptionWithCalendar } from '../../calendar/hooks/useCalendarSubscriptions'
 import { CATEGORIES } from '../../../types/subscription'
-import { useGoogleCalendar } from '../../calendar/hooks/useGoogleCalendar'
 import type { Database } from '../../../types/database.types'
 
 type Subscription = Database['public']['Tables']['subscriptions']['Row']
@@ -30,8 +28,8 @@ interface SubscriptionFormProps {
 }
 
 export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProps) {
-  const createSubscription = useCreateSubscription()
-  const updateSubscription = useUpdateSubscription()
+  const createSubscription = useCreateSubscriptionWithCalendar()
+  const updateSubscription = useUpdateSubscriptionWithCalendar()
   const isEditing = !!subscription
   const [addToCalendar, setAddToCalendar] = useState(false)
   const [calendarError, setCalendarError] = useState<string | null>(null)

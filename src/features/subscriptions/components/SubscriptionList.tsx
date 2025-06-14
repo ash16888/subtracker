@@ -2,7 +2,7 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import type { Database } from '../../../types/database.types'
 import { formatCurrency } from '../../../lib/utils/calculations'
-import { useDeleteSubscription } from '../hooks/useSubscriptions'
+import { useDeleteSubscriptionWithCalendar } from '../../calendar/hooks/useCalendarSubscriptions'
 import { useState } from 'react'
 import { SubscriptionForm } from './SubscriptionForm'
 
@@ -13,7 +13,7 @@ interface SubscriptionListProps {
 }
 
 export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
-  const deleteSubscription = useDeleteSubscription()
+  const deleteSubscription = useDeleteSubscriptionWithCalendar()
   const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null)
 
   const handleDelete = async (id: string) => {
