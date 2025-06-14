@@ -57,6 +57,11 @@ class GoogleCalendarService {
       throw new Error(`Google Calendar API error: ${response.status} ${response.statusText}`)
     }
 
+    // DELETE запросы возвращают пустой ответ (204 No Content)
+    if (method === 'DELETE') {
+      return null
+    }
+
     return response.json()
   }
 
