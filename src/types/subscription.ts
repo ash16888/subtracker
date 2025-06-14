@@ -10,6 +10,7 @@ export const subscriptionSchema = z.object({
   category: z.string().nullable().optional(),
   url: z.string().url().nullable().optional(),
   user_id: z.string().uuid().optional(),
+  google_calendar_event_id: z.string().nullable().optional(),
 })
 
 export type Subscription = z.infer<typeof subscriptionSchema>
