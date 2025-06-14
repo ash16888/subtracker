@@ -5,6 +5,7 @@ import { SubscriptionList } from '../features/subscriptions/components/Subscript
 import { LoadingSpinner } from '../components/LoadingSpinner'
 import { Dashboard } from '../components/Dashboard'
 import { UpcomingPaymentsPage } from './UpcomingPaymentsPage'
+import { CalendarPermissionBanner } from '../components/CalendarPermissionBanner'
 
 export function DashboardPage() {
   const [showForm, setShowForm] = useState(false)
@@ -54,6 +55,8 @@ export function DashboardPage() {
           </button>
         </div>
       </div>
+
+      <CalendarPermissionBanner />
 
       {/* Навигационные вкладки */}
       <div className="mb-6">

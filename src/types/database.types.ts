@@ -20,6 +20,7 @@ export interface Database {
           category: string | null
           url: string | null
           user_id: string
+          google_calendar_event_id: string | null
           created_at: string
           updated_at: string
         }
@@ -33,6 +34,7 @@ export interface Database {
           category?: string | null
           url?: string | null
           user_id: string
+          google_calendar_event_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -46,6 +48,7 @@ export interface Database {
           category?: string | null
           url?: string | null
           user_id?: string
+          google_calendar_event_id?: string | null
           created_at?: string
           updated_at?: string
         }

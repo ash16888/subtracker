@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { format } from 'date-fns'
-import { useCreateSubscription, useUpdateSubscription } from '../hooks/useSubscriptions'
+import { useCreateSubscriptionWithCalendar, useUpdateSubscriptionWithCalendar } from '../../calendar/hooks/useCalendarSubscriptions'
 import { CATEGORIES } from '../../../types/subscription'
 import type { Database } from '../../../types/database.types'
 
@@ -28,8 +28,8 @@ interface SubscriptionFormProps {
 }
 
 export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProps) {
-  const createSubscription = useCreateSubscription()
-  const updateSubscription = useUpdateSubscription()
+  const createSubscription = useCreateSubscriptionWithCalendar()
+  const updateSubscription = useUpdateSubscriptionWithCalendar()
   const isEditing = !!subscription
   
   const {
