@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase'
-import { Session } from '@supabase/supabase-js'
+import type { Session } from '@supabase/supabase-js'
 import { ensureGoogleApisLoaded } from './googleAuthLoader'
 
 interface CalendarEvent {
@@ -170,7 +170,7 @@ class GoogleCalendarService {
       }
 
       const result = await this.makeCalendarRequest('POST', 'calendars/primary/events', event)
-      return result.id
+      return (result as { id: string }).id
     } catch (error) {
       console.error('Error creating calendar event:', error)
       return null
@@ -193,7 +193,7 @@ class GoogleCalendarService {
       endDate.setHours(10, 30, 0, 0)
 
       const updatedEvent = {
-        ...existingEvent,
+        ...(existingEvent as Record<string, unknown>),
         summary: `Напоминание SubTracker: Платеж за ${subscriptionName}`,
         description: `Через 3 дня (${new Date(paymentDate).toLocaleDateString('ru-RU')}) будет списание ${amount} ${currency} за подписку на '${subscriptionName}'`,
         start: {
