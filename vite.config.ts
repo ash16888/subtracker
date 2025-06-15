@@ -10,5 +10,18 @@ export default defineConfig({
     watch: {
       usePolling: true
     }
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+          supabase: ['@supabase/supabase-js'],
+          ui: ['@hookform/resolvers', 'react-hook-form', 'zod']
+        }
+      }
+    }
   }
 })
