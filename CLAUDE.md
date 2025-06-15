@@ -151,7 +151,6 @@ CREATE TABLE subscriptions (
 - Автоматическое обновление `updated_at` при изменении записи
 
 ## 7. Команды разработки
-
 - `npm run dev` - запуск в режиме разработки
 - `npm run build` - сборка для продакшена
 - `npm run typecheck` - проверка типов TypeScript
