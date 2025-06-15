@@ -142,7 +142,6 @@ CREATE TABLE subscriptions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 ```
-
 ### Индексы:
 - `idx_subscriptions_user_id` - для быстрых запросов по пользователю
 - `idx_subscriptions_next_payment_date` - для сортировки по дате
