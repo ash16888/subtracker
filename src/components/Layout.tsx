@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '../features/auth/AuthContext'
+import { useAuth } from '../features/auth/useAuth'
 import { useSubscriptions } from '../features/subscriptions/hooks/useSubscriptions'
 import { calculateMonthlyTotal, formatCurrency } from '../lib/utils/calculations'
 

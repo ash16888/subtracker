@@ -1,13 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { format, subDays } from 'date-fns';
 import { ru } from 'date-fns/locale';
-
-declare global {
-  interface Window {
-    gapi: any;
-    google: any;
-  }
-}
+import type { GoogleTokenClient } from '../../../types/google'
 
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
@@ -37,7 +31,7 @@ interface CalendarEvent {
 export const useGoogleCalendar = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
-  const [tokenClient, setTokenClient] = useState<any>(null);
+  const [tokenClient, setTokenClient] = useState<GoogleTokenClient | null>(null);
 
   useEffect(() => {
     const loadGoogleApis = async () => {
@@ -81,7 +75,7 @@ export const useGoogleCalendar = () => {
       const client = window.google.accounts.oauth2.initTokenClient({
         client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
         scope: SCOPES,
-        callback: (tokenResponse: any) => {
+        callback: (tokenResponse) => {
           if (tokenResponse.error) {
             console.error('Error getting access token:', tokenResponse.error);
             return;

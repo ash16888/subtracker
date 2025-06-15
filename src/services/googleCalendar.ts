@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabase'
+import { Session } from '@supabase/supabase-js'
+import { ensureGoogleApisLoaded } from './googleAuthLoader'
 
 interface CalendarEvent {
   summary: string
@@ -21,12 +23,72 @@ interface CalendarEvent {
 }
 
 class GoogleCalendarService {
-  private async getAccessToken(): Promise<string | null> {
+  private session: Session | null = null
+  private tokenExpiresAt: number = 0
+
+  private async getSession(): Promise<Session | null> {
     const { data: { session } } = await supabase.auth.getSession()
+    this.session = session
+    return session
+  }
+
+  private async refreshAccessToken(): Promise<string | null> {
+    // Убеждаемся, что Google APIs загружены
+    const apisLoaded = await ensureGoogleApisLoaded()
+    if (!apisLoaded) {
+      console.error('Failed to load Google APIs')
+      return null
+    }
+
+    // Проверяем, загружен ли Google Identity Services
+    if (typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
+      return new Promise((resolve) => {
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
+          callback: async (response) => {
+            if (response.access_token) {
+              // Обновляем токен в локальной сессии
+              if (this.session) {
+                this.session.provider_token = response.access_token
+                this.tokenExpiresAt = Date.now() + ((response.expires_in || 3600) * 1000)
+              }
+              resolve(response.access_token)
+            } else {
+              console.error('Failed to get new access token')
+              resolve(null)
+            }
+          },
+          error_callback: (error) => {
+            console.error('Error during token refresh:', error)
+            resolve(null)
+          }
+        })
+        
+        // Запрашиваем новый токен без промпта для автоматического обновления
+        tokenClient.requestAccessToken({ prompt: '' })
+      })
+    } else {
+      console.error('Google Identity Services not loaded')
+      return null
+    }
+  }
+
+  private async getAccessToken(): Promise<string | null> {
+    const session = await this.getSession()
     
     if (!session?.provider_token) {
       console.error('No Google access token available')
       return null
+    }
+    
+    // Проверяем, не истек ли токен (обновляем за 5 минут до истечения)
+    if (this.tokenExpiresAt && Date.now() > this.tokenExpiresAt - 300000) {
+      console.log('Access token expired or expiring soon, refreshing...')
+      const newToken = await this.refreshAccessToken()
+      if (newToken) {
+        return newToken
+      }
     }
     
     return session.provider_token
@@ -35,8 +97,9 @@ class GoogleCalendarService {
   private async makeCalendarRequest(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     endpoint: string,
-    body?: any
-  ) {
+    body?: unknown,
+    retry = true
+  ): Promise<unknown> {
     const accessToken = await this.getAccessToken()
     if (!accessToken) {
       throw new Error('Google access token not available')
@@ -50,6 +113,15 @@ class GoogleCalendarService {
       },
       body: body ? JSON.stringify(body) : undefined,
     })
+
+    // Если получили 401, пробуем обновить токен и повторить запрос
+    if (response.status === 401 && retry) {
+      console.log('Got 401, attempting to refresh token and retry...')
+      const newToken = await this.refreshAccessToken()
+      if (newToken) {
+        return this.makeCalendarRequest(method, endpoint, body, false)
+      }
+    }
 
     if (!response.ok) {
       const error = await response.text()
@@ -163,6 +235,12 @@ class GoogleCalendarService {
       console.error('Calendar not accessible:', error)
       return false
     }
+  }
+
+  // Метод для принудительного обновления токена
+  async forceTokenRefresh(): Promise<boolean> {
+    const newToken = await this.refreshAccessToken()
+    return !!newToken
   }
 }
 

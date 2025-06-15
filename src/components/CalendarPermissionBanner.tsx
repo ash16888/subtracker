@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../features/auth/AuthContext'
+import { useAuth } from '../features/auth/useAuth'
 import { googleCalendarService } from '../services/googleCalendar'
 
 export function CalendarPermissionBanner() {
@@ -23,7 +23,7 @@ export function CalendarPermissionBanner() {
     }
 
     checkCalendarAccess()
-  }, [isGoogleUser])
+  }, [isGoogleUser, user])
 
   const handleReauthorize = async () => {
     setIsLoading(true)
