@@ -19,10 +19,14 @@ export function useTokenRefresh() {
 
   const refreshToken = useCallback(async () => {
     try {
+      console.log('Attempting to refresh token...')
       const success = await googleCalendarService.forceTokenRefresh()
       if (success) {
         toast.success('Токен Google Calendar успешно обновлен')
-        await checkTokenStatus()
+        // Ждем немного перед проверкой статуса, чтобы убедиться что токен обновился
+        await new Promise(resolve => setTimeout(resolve, 500))
+        const newStatus = await checkTokenStatus()
+        console.log('Token status after refresh:', newStatus)
         return true
       } else {
         toast.error('Не удалось обновить токен. Попробуйте войти заново.')

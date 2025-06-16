@@ -302,8 +302,23 @@ class GoogleCalendarService {
     const session = await this.getSession()
     const hasToken = !!session?.provider_token
     
-    if (!hasToken || !this.tokenExpiresAt) {
-      return { hasToken, isExpired: true, expiresIn: null }
+    if (!hasToken) {
+      return { hasToken: false, isExpired: true, expiresIn: null }
+    }
+    
+    // Восстанавливаем время истечения из localStorage если нет в памяти
+    if (!this.tokenExpiresAt) {
+      const savedExpiry = localStorage.getItem('subtracker-token-expires')
+      if (savedExpiry) {
+        this.tokenExpiresAt = parseInt(savedExpiry, 10)
+      }
+    }
+    
+    // Если время истечения неизвестно, считаем токен активным (по умолчанию токены живут час)
+    if (!this.tokenExpiresAt) {
+      // Устанавливаем время истечения на 50 минут вперед (консервативная оценка)
+      this.tokenExpiresAt = Date.now() + (50 * 60 * 1000)
+      localStorage.setItem('subtracker-token-expires', this.tokenExpiresAt.toString())
     }
     
     const now = Date.now()

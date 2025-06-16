@@ -6,7 +6,17 @@ import { cn } from '../lib/utils'
 export function GoogleCalendarStatus() {
   const { tokenStatus, refreshToken } = useTokenRefresh()
 
+  // Не показываем компонент если нет токена
   if (!tokenStatus.hasToken) {
+    return null
+  }
+
+  // Показываем компонент только если есть проблемы или токен скоро истечет
+  const shouldShow = tokenStatus.isExpired || 
+    tokenStatus.expiresIn === null || 
+    (tokenStatus.expiresIn !== null && tokenStatus.expiresIn < 300) // Показываем за 5 минут до истечения
+
+  if (!shouldShow) {
     return null
   }
 
@@ -24,7 +34,7 @@ export function GoogleCalendarStatus() {
     return 'Активен'
   }
 
-  const needsAction = tokenStatus.isExpired || (tokenStatus.expiresIn !== null && tokenStatus.expiresIn < 600)
+  const needsAction = true // Всегда показываем кнопку обновления когда компонент видим
 
   return (
     <div className="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg p-4 max-w-xs border">
