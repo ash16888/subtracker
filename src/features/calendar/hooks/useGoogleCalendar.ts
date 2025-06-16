@@ -6,6 +6,30 @@ import type { GoogleTokenClient } from '../../../types/google'
 const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
 const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
 
+// Тип для ресурса события Google Calendar
+type GoogleCalendarEventResource = {
+  summary?: string
+  description?: string
+  start?: {
+    dateTime?: string
+    date?: string
+    timeZone?: string
+  }
+  end?: {
+    dateTime?: string
+    date?: string
+    timeZone?: string
+  }
+  reminders?: {
+    useDefault?: boolean
+    overrides?: Array<{
+      method: 'email' | 'popup'
+      minutes: number
+    }>
+  }
+  [key: string]: unknown
+}
+
 interface CalendarEvent {
   summary: string;
   description?: string;
@@ -26,6 +50,7 @@ interface CalendarEvent {
       }
     ];
   };
+  [key: string]: unknown; // Добавляем index signature для совместимости
 }
 
 export const useGoogleCalendar = () => {
@@ -137,7 +162,7 @@ export const useGoogleCalendar = () => {
 
       const response = await window.gapi.client.calendar.events.insert({
         calendarId: 'primary',
-        resource: event as gapi.client.calendar.EventResource,
+        resource: event as GoogleCalendarEventResource,
       });
 
       return response.result.id;
@@ -191,7 +216,7 @@ export const useGoogleCalendar = () => {
       const response = await window.gapi.client.calendar.events.update({
         calendarId: 'primary',
         eventId: eventId,
-        resource: event as gapi.client.calendar.EventResource,
+        resource: event as GoogleCalendarEventResource,
       });
 
       return response.result.id;

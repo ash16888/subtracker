@@ -1,8 +1,8 @@
 declare global {
   interface Window {
-    gapi: {
+    gapi: typeof gapi & {
       load: (api: string, callback: () => void) => void
-      client: {
+      client: gapi.Client & {
         init: (config: {
           apiKey?: string
           discoveryDocs?: string[]
@@ -11,12 +11,12 @@ declare global {
           events: {
             insert: (params: {
               calendarId: string
-              resource: Record<string, unknown>
+              resource: gapi.client.calendar.EventResource
             }) => Promise<{ result: { id: string } }>
             update: (params: {
               calendarId: string
               eventId: string
-              resource: Record<string, unknown>
+              resource: gapi.client.calendar.EventResource
             }) => Promise<{ result: { id: string } }>
             delete: (params: {
               calendarId: string
@@ -54,4 +54,32 @@ export interface GoogleTokenError {
 
 export interface GoogleTokenClient {
   requestAccessToken: (options?: { prompt?: string }) => void
+}
+
+// Расширяем типы gapi для calendar API
+declare namespace gapi.client {
+  namespace calendar {
+    interface EventResource {
+      summary?: string
+      description?: string
+      start?: {
+        dateTime?: string
+        date?: string
+        timeZone?: string
+      }
+      end?: {
+        dateTime?: string
+        date?: string
+        timeZone?: string
+      }
+      reminders?: {
+        useDefault?: boolean
+        overrides?: Array<{
+          method: 'email' | 'popup'
+          minutes: number
+        }>
+      }
+      [key: string]: unknown
+    }
+  }
 }
