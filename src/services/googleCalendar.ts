@@ -31,6 +31,11 @@ class GoogleCalendarService {
   private async getSession(): Promise<Session | null> {
     const { data: { session } } = await supabase.auth.getSession()
     this.session = session
+    console.log('Session state:', {
+      hasSession: !!session,
+      hasProviderToken: !!session?.provider_token,
+      provider: session?.provider_token ? 'present' : 'missing'
+    })
     return session
   }
 
