@@ -137,7 +137,7 @@ export const useGoogleCalendar = () => {
 
       const response = await window.gapi.client.calendar.events.insert({
         calendarId: 'primary',
-        resource: event as any,
+        resource: event as gapi.client.calendar.EventResource,
       });
 
       return response.result.id;
@@ -191,7 +191,7 @@ export const useGoogleCalendar = () => {
       const response = await window.gapi.client.calendar.events.update({
         calendarId: 'primary',
         eventId: eventId,
-        resource: event as any,
+        resource: event as gapi.client.calendar.EventResource,
       });
 
       return response.result.id;

@@ -25,6 +25,8 @@ interface CalendarEvent {
 class GoogleCalendarService {
   private session: Session | null = null
   private tokenExpiresAt: number = 0
+  private refreshAttempts: number = 0
+  private maxRefreshAttempts: number = 3
 
   private async getSession(): Promise<Session | null> {
     const { data: { session } } = await supabase.auth.getSession()
@@ -32,7 +34,7 @@ class GoogleCalendarService {
     return session
   }
 
-  private async refreshAccessToken(): Promise<string | null> {
+  private async refreshAccessToken(prompt: '' | 'none' | 'select_account' = ''): Promise<string | null> {
     // Убеждаемся, что Google APIs загружены
     const apisLoaded = await ensureGoogleApisLoaded()
     if (!apisLoaded) {
@@ -43,16 +45,29 @@ class GoogleCalendarService {
     // Проверяем, загружен ли Google Identity Services
     if (typeof window !== 'undefined' && window.google?.accounts?.oauth2) {
       return new Promise((resolve) => {
+        let tokenResolved = false
+        const timeout = setTimeout(() => {
+          if (!tokenResolved) {
+            console.error('Token refresh timeout')
+            resolve(null)
+          }
+        }, 10000) // 10 second timeout
+
         const tokenClient = window.google.accounts.oauth2.initTokenClient({
           client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
           scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
           callback: async (response) => {
+            tokenResolved = true
+            clearTimeout(timeout)
             if (response.access_token) {
               // Обновляем токен в локальной сессии
               if (this.session) {
                 this.session.provider_token = response.access_token
                 this.tokenExpiresAt = Date.now() + ((response.expires_in || 3600) * 1000)
+                // Сохраняем время истечения в localStorage для восстановления
+                localStorage.setItem('subtracker-token-expires', this.tokenExpiresAt.toString())
               }
+              this.refreshAttempts = 0 // Reset attempts on success
               resolve(response.access_token)
             } else {
               console.error('Failed to get new access token')
@@ -60,13 +75,15 @@ class GoogleCalendarService {
             }
           },
           error_callback: (error) => {
+            tokenResolved = true
+            clearTimeout(timeout)
             console.error('Error during token refresh:', error)
             resolve(null)
           }
         })
         
-        // Запрашиваем новый токен без промпта для автоматического обновления
-        tokenClient.requestAccessToken({ prompt: '' })
+        // Запрашиваем новый токен с указанным prompt
+        tokenClient.requestAccessToken({ prompt })
       })
     } else {
       console.error('Google Identity Services not loaded')
@@ -82,12 +99,39 @@ class GoogleCalendarService {
       return null
     }
     
+    // Восстанавливаем время истечения из localStorage если нет в памяти
+    if (!this.tokenExpiresAt) {
+      const savedExpiry = localStorage.getItem('subtracker-token-expires')
+      if (savedExpiry) {
+        this.tokenExpiresAt = parseInt(savedExpiry, 10)
+      }
+    }
+    
     // Проверяем, не истек ли токен (обновляем за 5 минут до истечения)
     if (this.tokenExpiresAt && Date.now() > this.tokenExpiresAt - 300000) {
       console.log('Access token expired or expiring soon, refreshing...')
-      const newToken = await this.refreshAccessToken()
-      if (newToken) {
-        return newToken
+      
+      // Пробуем разные стратегии обновления
+      const strategies: Array<'' | 'none' | 'select_account'> = ['', 'none', 'select_account']
+      
+      for (const strategy of strategies) {
+        if (this.refreshAttempts >= this.maxRefreshAttempts) {
+          console.error('Max refresh attempts reached')
+          break
+        }
+        
+        this.refreshAttempts++
+        console.log(`Attempting token refresh with prompt: '${strategy}'`)
+        const newToken = await this.refreshAccessToken(strategy)
+        
+        if (newToken) {
+          return newToken
+        }
+        
+        // Небольшая задержка между попытками
+        if (strategy !== 'select_account') {
+          await new Promise(resolve => setTimeout(resolve, 1000))
+        }
       }
     }
     
@@ -117,7 +161,11 @@ class GoogleCalendarService {
     // Если получили 401, пробуем обновить токен и повторить запрос
     if (response.status === 401 && retry) {
       console.log('Got 401, attempting to refresh token and retry...')
-      const newToken = await this.refreshAccessToken()
+      
+      // Сбрасываем время истечения чтобы форсировать обновление
+      this.tokenExpiresAt = 0
+      const newToken = await this.getAccessToken() // Используем getAccessToken с логикой retry
+      
       if (newToken) {
         return this.makeCalendarRequest(method, endpoint, body, false)
       }
@@ -239,8 +287,30 @@ class GoogleCalendarService {
 
   // Метод для принудительного обновления токена
   async forceTokenRefresh(): Promise<boolean> {
-    const newToken = await this.refreshAccessToken()
+    this.tokenExpiresAt = 0 // Сбрасываем время истечения
+    this.refreshAttempts = 0 // Сбрасываем счетчик попыток
+    const newToken = await this.getAccessToken()
     return !!newToken
+  }
+  
+  // Метод для проверки состояния токена
+  async getTokenStatus(): Promise<{
+    hasToken: boolean
+    isExpired: boolean
+    expiresIn: number | null
+  }> {
+    const session = await this.getSession()
+    const hasToken = !!session?.provider_token
+    
+    if (!hasToken || !this.tokenExpiresAt) {
+      return { hasToken, isExpired: true, expiresIn: null }
+    }
+    
+    const now = Date.now()
+    const isExpired = now > this.tokenExpiresAt
+    const expiresIn = isExpired ? null : Math.floor((this.tokenExpiresAt - now) / 1000)
+    
+    return { hasToken, isExpired, expiresIn }
   }
 }
 

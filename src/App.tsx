@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { BrowserRouter } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import { queryClient } from './lib/react-query'
 import { AuthProvider } from './features/auth/AuthContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
@@ -25,6 +26,7 @@ function App() {
             }}
           >
             <AppRoutes />
+            <Toaster position="top-right" richColors />
           </BrowserRouter>
         </AuthProvider>
         <ReactQueryDevtools initialIsOpen={false} />

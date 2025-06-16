@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../features/auth/useAuth'
 import { useSubscriptions } from '../features/subscriptions/hooks/useSubscriptions'
 import { calculateMonthlyTotal, formatCurrency } from '../lib/utils/calculations'
+import { GoogleCalendarStatus } from './GoogleCalendarStatus'
 
 interface LayoutProps {
   children: ReactNode
@@ -67,6 +68,7 @@ export function Layout({ children }: LayoutProps) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
+      <GoogleCalendarStatus />
     </div>
   )
 }
