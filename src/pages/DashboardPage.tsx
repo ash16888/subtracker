@@ -6,6 +6,7 @@ import { LoadingSpinner } from '../components/LoadingSpinner'
 import { Dashboard } from '../components/Dashboard'
 import { UpcomingPaymentsPage } from './UpcomingPaymentsPage'
 import { CalendarPermissionBanner } from '../components/CalendarPermissionBanner'
+import { getCategoryIcon } from '../utils/categoryIcons'
 
 export function DashboardPage() {
   const [showForm, setShowForm] = useState(false)
@@ -41,16 +42,19 @@ export function DashboardPage() {
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">SubTracker</h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <h1 className="text-3xl font-bold gradient-text">SubTracker</h1>
+          <p className="mt-2 text-gray-600 font-medium">
             Управляйте своими подписками и контролируйте расходы
           </p>
         </div>
-        <div className="mt-4 sm:mt-0">
+        <div className="mt-6 sm:mt-0">
           <button
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-semibold rounded-xl shadow-soft text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:-translate-y-0.5 transition-all duration-200"
           >
+            <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
             Добавить подписку
           </button>
         </div>
@@ -59,70 +63,90 @@ export function DashboardPage() {
       <CalendarPermissionBanner />
 
       {/* Навигационные вкладки */}
-      <div className="mb-6">
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
+      <div className="mb-8">
+        <div className="card">
+          <nav className="flex space-x-1 p-2">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all duration-200 ${
                 activeTab === 'dashboard'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              Дашборд
+              <div className="flex items-center justify-center space-x-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span>Дашборд</span>
+              </div>
             </button>
             <button
               onClick={() => setActiveTab('subscriptions')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all duration-200 ${
                 activeTab === 'subscriptions'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              Мои подписки
+              <div className="flex items-center justify-center space-x-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <span>Мои подписки</span>
+              </div>
             </button>
             <button
               onClick={() => setActiveTab('payments')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
+              className={`flex-1 py-3 px-4 text-sm font-medium rounded-lg transition-all duration-200 ${
                 activeTab === 'payments'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              Ближайшие платежи
+              <div className="flex items-center justify-center space-x-2">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>Ближайшие платежи</span>
+              </div>
             </button>
           </nav>
         </div>
       </div>
 
       {activeTab === 'subscriptions' && availableCategories.length > 0 && (
-        <div className="mb-6">
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm font-medium text-gray-700">Фильтр по категориям:</span>
-            <button
-              onClick={() => setSelectedCategory('')}
-              className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                !selectedCategory
-                  ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              Все
-            </button>
-            {availableCategories.map((category) => (
-              <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-                  selectedCategory === category
-                    ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {category}
-              </button>
-            ))}
+        <div className="mb-8">
+          <div className="card">
+            <div className="p-4">
+              <div className="flex flex-wrap gap-3 items-center">
+                <span className="text-sm font-semibold text-gray-700">Фильтр по категориям:</span>
+                <button
+                  onClick={() => setSelectedCategory('')}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    !selectedCategory
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md transform scale-105'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:scale-105'
+                  }`}
+                >
+                  Все
+                </button>
+                {availableCategories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                      selectedCategory === category
+                        ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md transform scale-105'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:scale-105'
+                    }`}
+                  >
+                    {getCategoryIcon(category, "w-4 h-4")}
+                    <span>{category}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -143,59 +167,69 @@ export function DashboardPage() {
           filteredSubscriptions.length > 0 ? (
             <SubscriptionList subscriptions={filteredSubscriptions} />
           ) : (
-            <div className="text-center py-12 bg-white rounded-lg shadow">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Нет подписок в категории "{selectedCategory}"</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Попробуйте выбрать другую категорию или сбросьте фильтр
-              </p>
-              <div className="mt-6">
+            <div className="card animate-fade-in">
+              <div className="text-center py-16">
+                <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center">
+                  <svg
+                    className="h-10 w-10 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1.5}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Нет подписок в категории "{selectedCategory}"</h3>
+                <p className="text-gray-600 mb-8 max-w-sm mx-auto">
+                  Попробуйте выбрать другую категорию или сбросьте фильтр, чтобы увидеть все подписки
+                </p>
                 <button
                   onClick={() => setSelectedCategory('')}
-                  className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-6 py-3 border border-gray-200 rounded-xl shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 hover:-translate-y-0.5"
                 >
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                  </svg>
                   Показать все
                 </button>
               </div>
             </div>
           )
         ) : (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-              />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Нет подписок</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Начните с добавления вашей первой подписки
-            </p>
-            <div className="mt-6">
+          <div className="card animate-fade-in">
+            <div className="text-center py-20">
+              <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
+                <svg
+                  className="h-12 w-12 text-blue-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Добро пожаловать в SubTracker!</h3>
+              <p className="text-gray-600 mb-8 max-w-md mx-auto">
+                Начните управлять своими подписками и контролировать расходы. Добавьте первую подписку, чтобы увидеть аналитику.
+              </p>
               <button
                 onClick={() => setShowForm(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-8 py-4 border border-transparent text-base font-semibold rounded-xl shadow-soft text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transform hover:-translate-y-0.5 transition-all duration-200"
               >
-                Добавить подписку
+                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Добавить первую подписку
               </button>
             </div>
           </div>
