@@ -149,40 +149,64 @@ class GoogleCalendarService {
       throw new Error('Google access token not available')
     }
 
-    const response = await fetch(`https://www.googleapis.com/calendar/v3/${endpoint}`, {
-      method,
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    })
+    try {
+      const response = await fetch(`https://www.googleapis.com/calendar/v3/${endpoint}`, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      })
 
-    // Если получили 401, пробуем обновить токен и повторить запрос
-    if (response.status === 401 && retry) {
-      console.log('Got 401, attempting to refresh token and retry...')
-      
-      // Сбрасываем время истечения чтобы форсировать обновление
-      this.tokenExpiresAt = 0
-      const newToken = await this.getAccessToken() // Используем getAccessToken с логикой retry
-      
-      if (newToken) {
-        return this.makeCalendarRequest(method, endpoint, body, false)
+      // Если получили 401, пробуем обновить токен и повторить запрос
+      if (response.status === 401 && retry) {
+        console.log('Got 401, attempting to refresh token and retry...')
+        
+        // Сбрасываем время истечения чтобы форсировать обновление
+        this.tokenExpiresAt = 0
+        const newToken = await this.getAccessToken() // Используем getAccessToken с логикой retry
+        
+        if (newToken) {
+          return this.makeCalendarRequest(method, endpoint, body, false)
+        }
       }
-    }
 
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('Google Calendar API error:', error)
-      throw new Error(`Google Calendar API error: ${response.status} ${response.statusText}`)
-    }
+      if (!response.ok) {
+        const error = await response.text()
+        console.error('Google Calendar API error:', error)
+        throw new Error(`Google Calendar API error: ${response.status} ${response.statusText}`)
+      }
 
-    // DELETE запросы возвращают пустой ответ (204 No Content)
-    if (method === 'DELETE') {
-      return null
-    }
+      // DELETE запросы возвращают пустой ответ (204 No Content)
+      if (method === 'DELETE') {
+        return null
+      }
 
-    return response.json()
+      return response.json()
+    } catch (error) {
+      // Обрабатываем сетевые ошибки (включая ERR_SOCKET_NOT_CONNECTED)
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.error('Network error, possibly due to expired/invalid token:', error)
+        
+        if (retry) {
+          console.log('Network error detected, forcing token refresh and retry...')
+          // Сбрасываем время истечения чтобы форсировать обновление
+          this.tokenExpiresAt = 0
+          this.refreshAttempts = 0 // Сбрасываем счетчик попыток
+          
+          const newToken = await this.getAccessToken()
+          if (newToken) {
+            // Добавляем небольшую задержку перед повторной попыткой
+            await new Promise(resolve => setTimeout(resolve, 1000))
+            return this.makeCalendarRequest(method, endpoint, body, false)
+          }
+        }
+      }
+      
+      // Перебрасываем ошибку дальше
+      throw error
+    }
   }
 
   async createPaymentReminder(subscriptionName: string, amount: number, currency: string, paymentDate: string): Promise<string | null> {
@@ -275,12 +299,24 @@ class GoogleCalendarService {
   async isCalendarAccessible(): Promise<boolean> {
     try {
       const accessToken = await this.getAccessToken()
-      if (!accessToken) return false
+      if (!accessToken) {
+        console.log('No access token available')
+        return false
+      }
       
       await this.makeCalendarRequest('GET', 'calendars/primary')
       return true
     } catch (error) {
       console.error('Calendar not accessible:', error)
+      
+      // Если это сетевая ошибка или ошибка токена, пробуем сбросить состояние
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.log('Network error in isCalendarAccessible, resetting token state')
+        this.tokenExpiresAt = 0
+        this.refreshAttempts = 0
+        localStorage.removeItem('subtracker-token-expires')
+      }
+      
       return false
     }
   }

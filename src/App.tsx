@@ -11,7 +11,7 @@ import { loadGoogleApis } from './services/googleAuthLoader'
 
 function App() {
   useEffect(() => {
-    // Загружаем Google APIs при старте приложения
+    // Загружаем Google Identity Services при старте приложения
     loadGoogleApis().catch(console.error)
   }, [])
 

@@ -1,11 +1,9 @@
-// Глобальный загрузчик Google Identity Services и Google APIs
-let googleApisLoaded = false
+// Глобальный загрузчик Google Identity Services
+let googleIdentityLoaded = false
 let loadingPromise: Promise<void> | null = null
 
-// Типы для Google APIs определены в types/google.d.ts
-
 export const loadGoogleApis = (): Promise<void> => {
-  if (googleApisLoaded) {
+  if (googleIdentityLoaded) {
     return Promise.resolve()
   }
 
@@ -15,64 +13,31 @@ export const loadGoogleApis = (): Promise<void> => {
 
   loadingPromise = new Promise((resolve, reject) => {
     try {
-      // Проверяем, не загружены ли уже скрипты
+      // Проверяем, не загружен ли уже скрипт Google Identity Services
       const existingGsiScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]')
-      const existingGapiScript = document.querySelector('script[src="https://apis.google.com/js/api.js"]')
 
-      let gsiLoaded = !!existingGsiScript
-      let gapiLoaded = !!existingGapiScript
-
-      const checkBothLoaded = () => {
-        if (gsiLoaded && gapiLoaded) {
-          googleApisLoaded = true
-          resolve()
-        }
+      if (existingGsiScript) {
+        googleIdentityLoaded = true
+        resolve()
+        return
       }
 
       // Загружаем Google Identity Services
-      if (!existingGsiScript) {
-        const gisScript = document.createElement('script')
-        gisScript.src = 'https://accounts.google.com/gsi/client'
-        gisScript.async = true
-        gisScript.defer = true
-        
-        gisScript.onload = () => {
-          gsiLoaded = true
-          checkBothLoaded()
-        }
-        
-        gisScript.onerror = () => {
-          reject(new Error('Failed to load Google Identity Services'))
-        }
-        
-        document.body.appendChild(gisScript)
-      } else {
-        gsiLoaded = true
+      const gisScript = document.createElement('script')
+      gisScript.src = 'https://accounts.google.com/gsi/client'
+      gisScript.async = true
+      gisScript.defer = true
+      
+      gisScript.onload = () => {
+        googleIdentityLoaded = true
+        resolve()
       }
-
-      // Загружаем Google APIs
-      if (!existingGapiScript) {
-        const gapiScript = document.createElement('script')
-        gapiScript.src = 'https://apis.google.com/js/api.js'
-        gapiScript.async = true
-        gapiScript.defer = true
-        
-        gapiScript.onload = () => {
-          gapiLoaded = true
-          checkBothLoaded()
-        }
-        
-        gapiScript.onerror = () => {
-          reject(new Error('Failed to load Google APIs'))
-        }
-        
-        document.body.appendChild(gapiScript)
-      } else {
-        gapiLoaded = true
+      
+      gisScript.onerror = () => {
+        reject(new Error('Failed to load Google Identity Services'))
       }
-
-      // Если оба скрипта уже были загружены
-      checkBothLoaded()
+      
+      document.body.appendChild(gisScript)
     } catch (error) {
       reject(error)
     }
@@ -86,7 +51,7 @@ export const ensureGoogleApisLoaded = async (): Promise<boolean> => {
     await loadGoogleApis()
     return true
   } catch (error) {
-    console.error('Failed to load Google APIs:', error)
+    console.error('Failed to load Google Identity Services:', error)
     return false
   }
 }
