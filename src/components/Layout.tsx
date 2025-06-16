@@ -44,16 +44,6 @@ export function Layout({ children }: LayoutProps) {
                 >
                   Главная
                 </Link>
-                <Link
-                  to="/settings"
-                  className={`text-sm ${
-                    location.pathname === '/settings' 
-                      ? 'text-gray-900 font-medium' 
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  Настройки
-                </Link>
               </nav>
               <button
                 onClick={() => signOut()}

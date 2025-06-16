@@ -118,7 +118,6 @@ src/
 - `LoginPage` - вход через Google
 - `DashboardPage` - главная страница с аналитикой
 - `UpcomingPaymentsPage` - предстоящие платежи
-- `SettingsPage` - настройки приложения
 
 ### Безопасность:
 - Row Level Security (RLS) в Supabase
