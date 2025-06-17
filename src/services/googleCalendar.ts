@@ -74,7 +74,7 @@ class GoogleCalendarService {
               resolve(null)
             }
           },
-          error_callback: (error) => {
+          error_callback: () => {
             tokenResolved = true
             clearTimeout(timeout)
             // Token refresh failed
@@ -166,7 +166,7 @@ class GoogleCalendarService {
       }
 
       if (!response.ok) {
-        const error = await response.text()
+        await response.text()
         throw new Error('Failed to access Google Calendar. Please try again.')
       }
 
