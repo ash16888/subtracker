@@ -33,7 +33,6 @@ export function useCreateSubscription() {
 
   return useMutation({
     mutationFn: async (subscription: Omit<SubscriptionInsert, 'user_id'>) => {
-      console.log('Regular createSubscription hook called');
       if (!user) throw new Error('User not authenticated')
 
       const { data, error } = await supabase
@@ -43,7 +42,6 @@ export function useCreateSubscription() {
         .single()
 
       if (error) throw error
-      console.log('Subscription created successfully:', data);
       return data
     },
     onSuccess: () => {

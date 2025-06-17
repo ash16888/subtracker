@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (mounted) {
           if (error) {
-            console.error('Error restoring session:', error)
+            // Error restoring session
             // Очищаем невалидную сессию
             await supabase.auth.signOut()
           } else if (storedSession) {
@@ -37,17 +37,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (user) {
               setSession(storedSession)
               setUser(user)
-              console.log('Session restored successfully')
+              // Session restored successfully
             } else {
               // Сессия невалидна
-              console.log('Session invalid, signing out')
+              // Session invalid, signing out
               await supabase.auth.signOut()
             }
           }
           setLoading(false)
         }
       } catch (error) {
-        console.error('Error initializing auth:', error)
+        // Error initializing auth
         if (mounted) {
           setLoading(false)
         }
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Подписываемся на изменения состояния авторизации
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event)
+      // Auth state changed
       
       if (mounted) {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {

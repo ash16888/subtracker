@@ -31,11 +31,6 @@ class GoogleCalendarService {
   private async getSession(): Promise<Session | null> {
     const { data: { session } } = await supabase.auth.getSession()
     this.session = session
-    console.log('Session state:', {
-      hasSession: !!session,
-      hasProviderToken: !!session?.provider_token,
-      provider: session?.provider_token ? 'present' : 'missing'
-    })
     return session
   }
 
@@ -75,14 +70,14 @@ class GoogleCalendarService {
               this.refreshAttempts = 0 // Reset attempts on success
               resolve(response.access_token)
             } else {
-              console.error('Failed to get new access token')
+              // Failed to get new access token
               resolve(null)
             }
           },
           error_callback: (error) => {
             tokenResolved = true
             clearTimeout(timeout)
-            console.error('Error during token refresh:', error)
+            // Token refresh failed
             resolve(null)
           }
         })
@@ -91,7 +86,7 @@ class GoogleCalendarService {
         tokenClient.requestAccessToken({ prompt })
       })
     } else {
-      console.error('Google Identity Services not loaded')
+      // Google Identity Services not loaded
       return null
     }
   }
@@ -100,7 +95,6 @@ class GoogleCalendarService {
     const session = await this.getSession()
     
     if (!session?.provider_token) {
-      console.error('No Google access token available')
       return null
     }
     
@@ -114,19 +108,15 @@ class GoogleCalendarService {
     
     // Проверяем, не истек ли токен (обновляем за 5 минут до истечения)
     if (this.tokenExpiresAt && Date.now() > this.tokenExpiresAt - 300000) {
-      console.log('Access token expired or expiring soon, refreshing...')
-      
       // Пробуем разные стратегии обновления
       const strategies: Array<'' | 'none' | 'select_account'> = ['', 'none', 'select_account']
       
       for (const strategy of strategies) {
         if (this.refreshAttempts >= this.maxRefreshAttempts) {
-          console.error('Max refresh attempts reached')
           break
         }
         
         this.refreshAttempts++
-        console.log(`Attempting token refresh with prompt: '${strategy}'`)
         const newToken = await this.refreshAccessToken(strategy)
         
         if (newToken) {
@@ -166,11 +156,9 @@ class GoogleCalendarService {
 
       // Если получили 401, пробуем обновить токен и повторить запрос
       if (response.status === 401 && retry) {
-        console.log('Got 401, attempting to refresh token and retry...')
-        
         // Сбрасываем время истечения чтобы форсировать обновление
         this.tokenExpiresAt = 0
-        const newToken = await this.getAccessToken() // Используем getAccessToken с логикой retry
+        const newToken = await this.getAccessToken()
         
         if (newToken) {
           return this.makeCalendarRequest(method, endpoint, body, false)
@@ -179,8 +167,7 @@ class GoogleCalendarService {
 
       if (!response.ok) {
         const error = await response.text()
-        console.error('Google Calendar API error:', error)
-        throw new Error(`Google Calendar API error: ${response.status} ${response.statusText}`)
+        throw new Error('Failed to access Google Calendar. Please try again.')
       }
 
       // DELETE запросы возвращают пустой ответ (204 No Content)
@@ -192,13 +179,10 @@ class GoogleCalendarService {
     } catch (error) {
       // Обрабатываем сетевые ошибки (включая ERR_SOCKET_NOT_CONNECTED)
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        console.error('Network error, possibly due to expired/invalid token:', error)
-        
         if (retry) {
-          console.log('Network error detected, forcing token refresh and retry...')
           // Сбрасываем время истечения чтобы форсировать обновление
           this.tokenExpiresAt = 0
-          this.refreshAttempts = 0 // Сбрасываем счетчик попыток
+          this.refreshAttempts = 0
           
           const newToken = await this.getAccessToken()
           if (newToken) {
@@ -249,7 +233,6 @@ class GoogleCalendarService {
       const result = await this.makeCalendarRequest('POST', 'calendars/primary/events', event)
       return (result as { id: string }).id
     } catch (error) {
-      console.error('Error creating calendar event:', error)
       return null
     }
   }
@@ -286,7 +269,6 @@ class GoogleCalendarService {
       await this.makeCalendarRequest('PUT', `calendars/primary/events/${eventId}`, updatedEvent)
       return true
     } catch (error) {
-      console.error('Error updating calendar event:', error)
       return false
     }
   }
@@ -296,7 +278,6 @@ class GoogleCalendarService {
       await this.makeCalendarRequest('DELETE', `calendars/primary/events/${eventId}`)
       return true
     } catch (error) {
-      console.error('Error deleting calendar event:', error)
       return false
     }
   }
@@ -305,18 +286,14 @@ class GoogleCalendarService {
     try {
       const accessToken = await this.getAccessToken()
       if (!accessToken) {
-        console.log('No access token available')
         return false
       }
       
       await this.makeCalendarRequest('GET', 'calendars/primary')
       return true
     } catch (error) {
-      console.error('Calendar not accessible:', error)
-      
       // Если это сетевая ошибка или ошибка токена, пробуем сбросить состояние
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        console.log('Network error in isCalendarAccessible, resetting token state')
         this.tokenExpiresAt = 0
         this.refreshAttempts = 0
         localStorage.removeItem('subtracker-token-expires')
@@ -328,8 +305,8 @@ class GoogleCalendarService {
 
   // Метод для принудительного обновления токена
   async forceTokenRefresh(): Promise<boolean> {
-    this.tokenExpiresAt = 0 // Сбрасываем время истечения
-    this.refreshAttempts = 0 // Сбрасываем счетчик попыток
+    this.tokenExpiresAt = 0
+    this.refreshAttempts = 0
     const newToken = await this.getAccessToken()
     return !!newToken
   }
@@ -355,9 +332,9 @@ class GoogleCalendarService {
       }
     }
     
-    // Если время истечения неизвестно, считаем токен активным (по умолчанию токены живут час)
+    // Если время истечения неизвестно, считаем токен активным
     if (!this.tokenExpiresAt) {
-      // Устанавливаем время истечения на 50 минут вперед (консервативная оценка)
+      // Устанавливаем время истечения на 50 минут вперед
       this.tokenExpiresAt = Date.now() + (50 * 60 * 1000)
       localStorage.setItem('subtracker-token-expires', this.tokenExpiresAt.toString())
     }

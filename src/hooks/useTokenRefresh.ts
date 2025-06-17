@@ -19,14 +19,12 @@ export function useTokenRefresh() {
 
   const refreshToken = useCallback(async () => {
     try {
-      console.log('Attempting to refresh token...')
       const success = await googleCalendarService.forceTokenRefresh()
       if (success) {
         toast.success('Токен Google Calendar успешно обновлен')
         // Ждем немного перед проверкой статуса, чтобы убедиться что токен обновился
         await new Promise(resolve => setTimeout(resolve, 500))
-        const newStatus = await checkTokenStatus()
-        console.log('Token status after refresh:', newStatus)
+        await checkTokenStatus()
         return true
       } else {
         toast.error('Не удалось обновить токен. Попробуйте войти заново.')
@@ -43,18 +41,15 @@ export function useTokenRefresh() {
   useEffect(() => {
     if (session?.provider_token) {
       const initializeToken = async () => {
-        console.log('Session detected, checking initial token status...')
         const status = await checkTokenStatus()
         
         // Если токен истек при загрузке, сразу пробуем обновить
         if (status.isExpired) {
-          console.log('Token expired on page load, refreshing...')
           await refreshToken()
         } else {
           // Проверяем доступность календаря
           const isAccessible = await googleCalendarService.isCalendarAccessible()
           if (!isAccessible && status.hasToken) {
-            console.log('Calendar not accessible on page load despite having token, refreshing...')
             await refreshToken()
           }
         }
@@ -74,7 +69,6 @@ export function useTokenRefresh() {
       
       // Если токен истекает менее чем через 10 минут, обновляем
       if (status.hasToken && status.expiresIn !== null && status.expiresIn < 600) {
-        console.log('Token expiring soon, refreshing proactively...')
         await refreshToken()
       }
     }, 5 * 60 * 1000) // 5 minutes
@@ -86,29 +80,22 @@ export function useTokenRefresh() {
   useEffect(() => {
     const handleVisibilityChange = async () => {
       if (document.visibilityState === 'visible' && session?.provider_token) {
-        console.log('Tab became visible, checking token status...')
-        
         // Сначала проверяем доступность календаря
         const isAccessible = await googleCalendarService.isCalendarAccessible()
         if (!isAccessible) {
-          console.log('Calendar not accessible, checking token status...')
           const status = await checkTokenStatus()
-          console.log('Token status:', status)
           
           // Если токен истек или календарь недоступен, принудительно обновляем
           if (status.isExpired || !status.hasToken) {
-            console.log('Token expired or missing, forcing refresh...')
             await refreshToken()
           } else {
             // Даже если токен не истек, но календарь недоступен, пробуем обновить
-            console.log('Token seems valid but calendar not accessible, trying refresh...')
             await refreshToken()
           }
         } else {
           // Календарь доступен, но проверяем не истекает ли токен скоро
           const status = await checkTokenStatus()
           if (status.expiresIn !== null && status.expiresIn < 300) {
-            console.log('Token expiring soon, refreshing proactively...')
             await refreshToken()
           }
         }
@@ -123,10 +110,8 @@ export function useTokenRefresh() {
   useEffect(() => {
     const handleOnline = async () => {
       if (session?.provider_token) {
-        console.log('Network connection restored, checking calendar accessibility...')
         const isAccessible = await googleCalendarService.isCalendarAccessible()
         if (!isAccessible) {
-          console.log('Calendar not accessible after network restore, refreshing token...')
           await refreshToken()
         }
       }

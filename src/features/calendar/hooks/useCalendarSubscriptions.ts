@@ -13,7 +13,6 @@ export function useCreateSubscriptionWithCalendar() {
 
   return useMutation({
     mutationFn: async (subscription: Omit<SubscriptionInsert, 'user_id'>) => {
-      console.log('Calendar-enabled createSubscription hook called');
       if (!user) throw new Error('User not authenticated')
 
       // Проверяем, авторизован ли пользователь через Google и доступен ли календарь
@@ -23,19 +22,13 @@ export function useCreateSubscriptionWithCalendar() {
       if (isGoogleUser) {
         const isCalendarAccessible = await googleCalendarService.isCalendarAccessible()
         if (isCalendarAccessible) {
-          console.log('Creating calendar event for Google user');
           calendarEventId = await googleCalendarService.createPaymentReminder(
             subscription.name,
             subscription.amount,
             subscription.currency,
             subscription.next_payment_date
           )
-          console.log('Calendar event created with ID:', calendarEventId);
-        } else {
-          console.log('Calendar not accessible for Google user');
         }
-      } else {
-        console.log('User not authenticated via Google, skipping calendar integration');
       }
 
       const { data, error } = await supabase
@@ -56,7 +49,6 @@ export function useCreateSubscriptionWithCalendar() {
         throw error
       }
       
-      console.log('Subscription created successfully with calendar integration:', data);
       return data
     },
     onSuccess: () => {
@@ -95,7 +87,6 @@ export function useUpdateSubscriptionWithCalendar() {
           if (needsCalendarUpdate) {
             if (calendarEventId) {
               // Обновляем существующее событие
-              console.log('Updating existing calendar event:', calendarEventId);
               const success = await googleCalendarService.updatePaymentReminder(
                 calendarEventId,
                 updates.name || currentSubscription.name,
@@ -104,7 +95,6 @@ export function useUpdateSubscriptionWithCalendar() {
                 updates.next_payment_date || currentSubscription.next_payment_date
               )
               if (!success) {
-                console.log('Failed to update calendar event, creating new one');
                 // Если не удалось обновить, создаем новое
                 calendarEventId = await googleCalendarService.createPaymentReminder(
                   updates.name || currentSubscription.name,
@@ -115,7 +105,6 @@ export function useUpdateSubscriptionWithCalendar() {
               }
             } else {
               // Создаем новое событие, если его не было
-              console.log('Creating new calendar event for existing subscription');
               calendarEventId = await googleCalendarService.createPaymentReminder(
                 updates.name || currentSubscription.name,
                 updates.amount || currentSubscription.amount,
@@ -165,7 +154,6 @@ export function useDeleteSubscriptionWithCalendar() {
       if (isGoogleUser && subscription.google_calendar_event_id) {
         const isCalendarAccessible = await googleCalendarService.isCalendarAccessible()
         if (isCalendarAccessible) {
-          console.log('Deleting calendar event:', subscription.google_calendar_event_id);
           await googleCalendarService.deletePaymentReminder(subscription.google_calendar_event_id)
         }
       }
