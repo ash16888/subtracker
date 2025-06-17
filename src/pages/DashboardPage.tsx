@@ -42,8 +42,7 @@ export function DashboardPage() {
     <div>
       <div className="sm:flex sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold gradient-text">SubTracker</h1>
-          <p className="mt-2 text-gray-600 font-medium">
+          <p className="text-lg text-gray-600 font-medium">
             Управляйте своими подписками и контролируйте расходы
           </p>
         </div>
