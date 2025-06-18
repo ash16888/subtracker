@@ -40,33 +40,76 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'o3',
         messages: [
-          {
-            role: 'system',
-            content: 'Ты финансовый аналитик, специализирующийся на анализе подписок. Проанализируй подписки пользователя и дай конкретные рекомендации по оптимизации.'
-          },
           {
             role: 'user',
             content: generatePrompt(subscriptions)
           }
         ],
-        temperature: 0.7,
-        max_tokens: 2000
+        max_completion_tokens: 10000,
+        reasoning_effort: 'medium'
       })
     })
 
 
+    if (!openaiResponse.ok) {
+      const errorData = await openaiResponse.text()
+      console.error('OpenAI API error:', openaiResponse.status, errorData)
+      throw new Error(`OpenAI API error: ${openaiResponse.status} - ${errorData}`)
+    }
+
     const aiResult = await openaiResponse.json()
     
     console.log('OpenAI API response status:', openaiResponse.status)
-    console.log('Raw AI response:', aiResult.choices?.[0]?.message?.content?.substring(0, 500) + '...')
+    console.log('Full AI result:', JSON.stringify(aiResult, null, 2))
     
-    if (!aiResult.choices?.[0]?.message?.content) {
-      throw new Error('Invalid AI response format')
+    // Проверяем разные возможные структуры ответа для o4-mini
+    let content = null
+    const choice = aiResult.choices?.[0]
+    const message = choice?.message
+    
+    console.log('Finish reason:', choice?.finish_reason)
+    console.log('Usage details:', JSON.stringify(aiResult.usage, null, 2))
+    
+    // Проверяем, есть ли отказ от модели
+    if (message?.refusal) {
+      console.error('Model refused to answer:', message.refusal)
+      throw new Error(`Model refused: ${message.refusal}`)
     }
     
-    const insights = parseAIResponse(aiResult.choices[0].message.content)
+    // Проверяем finish_reason для диагностики
+    if (choice?.finish_reason === 'length') {
+      console.error('Response was cut off due to token limit')
+      throw new Error('Response truncated due to token limit - try reducing input size')
+    }
+    
+    if (message?.content) {
+      content = message.content
+    } else if (choice?.text) {
+      content = choice.text
+    } else if (aiResult.content) {
+      content = aiResult.content
+    } else if (aiResult.text) {
+      content = aiResult.text
+    }
+    
+    if (!content) {
+      console.error('No content found in AI response. Available keys:', Object.keys(aiResult))
+      if (choice) {
+        console.error('Choice structure:', Object.keys(choice))
+        if (message) {
+          console.error('Message structure:', Object.keys(message))
+          console.error('Message content:', message.content)
+          console.error('Message refusal:', message.refusal)
+        }
+      }
+      throw new Error('Invalid AI response format - no content found')
+    }
+    
+    console.log('Raw AI response:', String(content).substring(0, 500) + '...')
+    
+    const insights = parseAIResponse(String(content))
 
     return new Response(
       JSON.stringify({ insights, generatedAt: new Date() }),
@@ -86,36 +129,51 @@ function generatePrompt(subscriptions: Record<string, unknown>[]) {
     return sum + (sub.billing_period === 'yearly' ? amount / 12 : amount)
   }, 0)
 
-  return `
-Проанализируй следующие подписки пользователя и предоставь инсайты:
+  const categories = [...new Set(subscriptions.map(sub => sub.category).filter(Boolean))]
+  const subscriptionNames = subscriptions.map(sub => sub.name).join(', ')
 
-ПОДПИСКИ:
+  return `
+Ты персональный финансовый консультант. Проанализируй подписки пользователя и напиши дружелюбный анализ в виде связного текста, органично включив в него все инсайты и рекомендации.
+
+ПОДПИСКИ ПОЛЬЗОВАТЕЛЯ:
 ${subscriptions.map(sub => `
-- ${sub.name}: ${sub.amount} ${sub.currency}/${sub.billing_period}
-- Категория: ${sub.category || 'Не указана'}
-- Следующий платеж: ${sub.next_payment_date}
+🔹 ${sub.name}: ${sub.amount} ${sub.currency}/${sub.billing_period}
+   Категория: ${sub.category || 'Не указана'}
+   Следующий платеж: ${sub.next_payment_date}
 `).join('\n')}
 
 ОБЩАЯ СУММА В МЕСЯЦ: ${Math.round(totalMonthly)} ₽
+КАТЕГОРИИ: ${categories.join(', ') || 'Не указаны'}
 
-Предоставь анализ в формате JSON со следующими типами инсайтов:
-- optimization: рекомендации по экономии
-- duplicate: возможные дубликаты функциональности
-- warning: предупреждения о расходах
-- forecast: прогнозы
-- category: анализ по категориям
-- recommendation: рекомендации о добавлении или замене подписок
+СТРУКТУРА ОТВЕТА:
+Напиши связный текстовый анализ, который включает:
 
-Для каждого инсайта укажи:
-- type: тип инсайта
-- priority: 'high' | 'medium' | 'low'
-- title: краткий заголовок
-- description: подробное описание
-- actionItems: массив конкретных действий
-- potentialSavings: потенциальная экономия в рублях/месяц (если применимо)
-- affectedSubscriptions: список затронутых подписок
+1. ПРИВЕТСТВИЕ И АНАЛИЗ ИНТЕРЕСОВ (1-2 абзаца)
+   - Похвали выбор пользователя, отметь интересные сервисы
+   - Проанализируй его цифровые привычки на основе подписок
+   - Ненавязчиво отметь общую картину расходов
 
-ВАЖНО: Отвечай ТОЛЬКО валидным JSON массивом без markdown блоков, без комментариев и без дополнительного текста. Начинай ответ сразу с [ и заканчивай ].
+2. ОСНОВНОЙ АНАЛИЗ (2-3 абзаца)
+   - Органично включи возможности оптимизации и экономии
+   - Отметь возможные дубликаты функциональности
+   - Дай практические советы по управлению подписками
+   - Укажи конкретные суммы потенциальной экономии где применимо
+
+3. РЕКОМЕНДАЦИИ И ЗАКЛЮЧЕНИЕ (1-2 абзаца)
+   - Блок "Возможно, вам были бы интересны" с персонализированными предложениями
+   - Общие советы по управлению подписками
+   - Позитивное заключение
+
+Верни результат в формате JSON:
+{
+  "analysis": "полный текстовый анализ в виде связного текста с абзацами",
+  "totalSavings": число_потенциальной_экономии_в_месяц,
+  "keyRecommendations": ["короткий совет 1", "короткий совет 2", "короткий совет 3"]
+}
+
+ТОН: Дружелюбный, персональный, как опытный друг. Используй эмодзи для акцентов. Пиши естественно, избегай списков и формальных структур.
+
+ВАЖНО: Отвечай ТОЛЬКО валидным JSON без markdown блоков.
   `
 }
 
@@ -136,16 +194,22 @@ function parseAIResponse(response: string) {
     
     console.log('Cleaned AI response:', cleanResponse.substring(0, 200) + '...')
     
-    const insights = JSON.parse(cleanResponse)
+    const aiResult = JSON.parse(cleanResponse)
     
-    // Проверяем, что это массив
-    const insightsArray = Array.isArray(insights) ? insights : [insights]
-    
-    return insightsArray.map((insight: Record<string, unknown>, index: number) => ({
-      ...insight,
-      id: `ai-${Date.now()}-${index}`,
+    // Преобразуем новый формат в старый для совместимости с фронтендом
+    const analysisInsight = {
+      id: `ai-analysis-${Date.now()}`,
+      type: 'analysis',
+      priority: 'high',
+      title: '📊 Персональный анализ ваших подписок',
+      description: aiResult.analysis || 'Анализ подписок',
+      actionItems: aiResult.keyRecommendations || [],
+      potentialSavings: aiResult.totalSavings || 0,
+      affectedSubscriptions: [],
       createdAt: new Date()
-    }))
+    }
+    
+    return [analysisInsight]
   } catch (error) {
     console.error('Failed to parse AI response:', error)
     console.error('Raw response:', response)

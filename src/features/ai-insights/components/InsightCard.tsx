@@ -6,7 +6,8 @@ import {
   ChartBarIcon,
   CurrencyDollarIcon,
   DocumentDuplicateIcon,
-  TagIcon
+  TagIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 
 interface InsightCardProps {
@@ -27,6 +28,8 @@ const getInsightIcon = (type: AIInsight['type']) => {
       return <CurrencyDollarIcon className="h-5 w-5" />;
     case 'category':
       return <TagIcon className="h-5 w-5" />;
+    case 'analysis':
+      return <ChatBubbleLeftRightIcon className="h-5 w-5" />;
   }
 };
 
@@ -55,6 +58,8 @@ const getIconColor = (type: AIInsight['type']) => {
       return 'text-green-600';
     case 'category':
       return 'text-orange-600';
+    case 'analysis':
+      return 'text-emerald-600';
   }
 };
 
@@ -67,7 +72,15 @@ export const InsightCard: React.FC<InsightCardProps> = ({ insight }) => {
         </div>
         <div className="flex-1">
           <h3 className="font-medium text-gray-900">{insight.title}</h3>
-          <p className="mt-1 text-sm text-gray-600">{insight.description}</p>
+          <div className="mt-1 text-sm text-gray-600">
+            {insight.type === 'analysis' ? (
+              <div className="whitespace-pre-line leading-relaxed">
+                {insight.description}
+              </div>
+            ) : (
+              <p>{insight.description}</p>
+            )}
+          </div>
           
           {insight.actionItems && insight.actionItems.length > 0 && (
             <ul className="mt-3 space-y-1">

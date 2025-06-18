@@ -60,124 +60,140 @@ export class AIService {
 
   private generateDemoInsights(request: GenerateInsightsRequest): GenerateInsightsResponse {
     const { subscriptions } = request;
-    const insights: AIInsight[] = [];
 
     const totalMonthlySpend = subscriptions.reduce((sum, sub) => {
       const monthlyAmount = sub.billing_period === 'yearly' ? sub.amount / 12 : sub.amount;
       return sum + monthlyAmount;
     }, 0);
 
-    const avgSubscriptionCost = totalMonthlySpend / subscriptions.length;
-
     const monthlySubscriptions = subscriptions.filter(s => s.billing_period === 'monthly');
+    const categories = [...new Set(subscriptions.map(sub => sub.category).filter(Boolean))] as string[];
+    const subscriptionNames = subscriptions.map(sub => sub.name).filter(Boolean);
 
-    if (monthlySubscriptions.length > 0) {
-      const potentialSavings = monthlySubscriptions.reduce((sum, sub) => {
-        const yearlyDiscount = sub.amount * 12 * 0.15;
-        return sum + yearlyDiscount;
-      }, 0);
+    // Вычисляем потенциальную экономию
+    const potentialSavings = monthlySubscriptions.reduce((sum, sub) => {
+      return sum + (sub.amount * 12 * 0.15) / 12; // 15% скидка при переходе на годовой план
+    }, 0);
 
-      insights.push({
-        id: 'opt-1',
-        type: 'optimization',
-        priority: 'high',
-        title: 'Переход на годовые тарифы',
-        description: `У вас ${monthlySubscriptions.length} подписок с месячной оплатой. Переход на годовые тарифы может сэкономить до 15% в год.`,
-        actionItems: [
-          'Проверьте возможность перехода на годовые тарифы',
-          'Сравните цены месячных и годовых планов',
-          'Рассмотрите переход для наиболее используемых сервисов'
-        ],
-        potentialSavings: Math.round(potentialSavings / 12),
-        affectedSubscriptions: monthlySubscriptions.map(s => s.name),
-        createdAt: new Date()
-      });
-    }
+    // Генерируем персональный анализ в стиле нового формата
+    const analysis = this.generatePersonalizedAnalysis(
+      subscriptions,
+      subscriptionNames,
+      categories,
+      totalMonthlySpend,
+      monthlySubscriptions.length,
+      Math.round(potentialSavings)
+    );
 
-    const categoryGroups = subscriptions.reduce((acc, sub) => {
-      const category = sub.category || 'Другое';
-      if (!acc[category]) acc[category] = [];
-      acc[category].push(sub);
-      return acc;
-    }, {} as Record<string, typeof subscriptions>);
-
-    Object.entries(categoryGroups).forEach(([category, subs]) => {
-      if (subs.length > 2) {
-        insights.push({
-          id: `cat-${category}`,
-          type: 'category',
-          priority: 'medium',
-          title: `Много подписок в категории "${category}"`,
-          description: `У вас ${subs.length} подписок в категории "${category}". Возможно, некоторые сервисы дублируют функциональность.`,
-          actionItems: [
-            'Проанализируйте, какие функции вы используете в каждом сервисе',
-            'Рассмотрите возможность объединения функций в одном сервисе'
-          ],
-          affectedSubscriptions: subs.map(s => s.name),
-          createdAt: new Date()
-        });
-      }
-    });
-
-    const expensiveSubscriptions = subscriptions.filter(sub => {
-      const monthlyAmount = sub.billing_period === 'yearly' ? sub.amount / 12 : sub.amount;
-      return monthlyAmount > avgSubscriptionCost * 1.5;
-    });
-
-    if (expensiveSubscriptions.length > 0) {
-      insights.push({
-        id: 'warn-1',
-        type: 'warning',
-        priority: 'medium',
-        title: 'Дорогие подписки',
-        description: `${expensiveSubscriptions.length} подписок стоят значительно больше среднего. Убедитесь, что вы получаете соответствующую ценность.`,
-        actionItems: [
-          'Оцените, насколько активно вы используете эти сервисы',
-          'Рассмотрите возможность перехода на более дешевые планы',
-          'Проверьте, есть ли альтернативы с лучшим соотношением цена/качество'
-        ],
-        affectedSubscriptions: expensiveSubscriptions.map(s => s.name),
-        createdAt: new Date()
-      });
-    }
-
-    const nextMonthForecast = totalMonthlySpend * 1.02;
-    insights.push({
-      id: 'forecast-1',
-      type: 'forecast',
-      priority: 'low',
-      title: 'Прогноз расходов на следующий месяц',
-      description: `Ожидаемые расходы на подписки в следующем месяце: ${Math.round(nextMonthForecast)} ₽`,
+    const insight: AIInsight = {
+      id: `ai-analysis-${Date.now()}`,
+      type: 'analysis',
+      priority: 'high',
+      title: '📊 Персональный анализ ваших подписок',
+      description: analysis,
       actionItems: [
-        'Подготовьте бюджет с учетом всех подписок',
-        'Проверьте даты списаний, чтобы избежать нехватки средств'
+        'Рассмотрите переход на годовые тарифы',
+        'Проведите аудит неиспользуемых сервисов',
+        'Изучите новые рекомендованные подписки'
       ],
+      potentialSavings: Math.round(potentialSavings),
+      affectedSubscriptions: [],
       createdAt: new Date()
-    });
-
-    if (totalMonthlySpend > 5000) {
-      insights.push({
-        id: 'trend-1',
-        type: 'trend',
-        priority: 'high',
-        title: 'Высокие общие расходы на подписки',
-        description: `Ваши месячные расходы на подписки составляют ${Math.round(totalMonthlySpend)} ₽. Это довольно высокая сумма.`,
-        actionItems: [
-          'Проведите аудит всех подписок',
-          'Отмените неиспользуемые сервисы',
-          'Рассмотрите возможность использования семейных планов'
-        ],
-        createdAt: new Date()
-      });
-    }
+    };
 
     return {
-      insights: insights.sort((a, b) => {
-        const priorityOrder = { high: 3, medium: 2, low: 1 };
-        return priorityOrder[b.priority] - priorityOrder[a.priority];
-      }),
+      insights: [insight],
       generatedAt: new Date()
     };
+  }
+
+  private generatePersonalizedAnalysis(
+    subscriptions: any[],
+    names: string[],
+    categories: string[],
+    totalMonthly: number,
+    monthlyCount: number,
+    savings: number
+  ): string {
+    const hasNetflix = names.some(n => n.toLowerCase().includes('netflix'));
+    const hasSpotify = names.some(n => n.toLowerCase().includes('spotify'));
+    const hasYouTube = names.some(n => n.toLowerCase().includes('youtube'));
+    const hasGaming = categories.includes('Игры');
+    const hasWork = categories.includes('Работа');
+    
+    let analysis = '';
+
+    // Приветствие и анализ интересов
+    analysis += `🎯 Отличный выбор подписок! Вижу, что у вас разносторонние интересы `;
+    
+    if (hasNetflix && hasSpotify) {
+      analysis += `— вы цените качественные развлечения с Netflix и музыку со Spotify. `;
+    } else if (hasYouTube) {
+      analysis += `— YouTube Premium показывает, что вы активно потребляете видеоконтент. `;
+    }
+    
+    if (hasGaming) {
+      analysis += `Подписки на игровые сервисы говорят о том, что игры — важная часть вашего досуга. `;
+    }
+    
+    if (hasWork) {
+      analysis += `Рабочие инструменты в списке показывают профессиональный подход к задачам. `;
+    }
+
+    analysis += `\n\n💰 Сейчас ваши подписки обходятся в ${Math.round(totalMonthly)} ₽ в месяц. `;
+    
+    if (totalMonthly < 2000) {
+      analysis += `Это весьма разумная сумма! Вы умеете контролировать расходы. `;
+    } else if (totalMonthly < 5000) {
+      analysis += `Это средний уровень трат на подписки — вполне нормально для активного пользователя. `;
+    } else {
+      analysis += `Это довольно высокая сумма, но если вы активно пользуетесь всеми сервисами — то это оправдано. `;
+    }
+
+    // Основной анализ и рекомендации
+    if (monthlyCount > 0) {
+      analysis += `\n\n🔄 У вас ${monthlyCount} подписок с месячной оплатой. Хорошая новость — многие сервисы предлагают скидки за годовую предоплату! `;
+      analysis += `Если перейти на годовые планы, можно сэкономить около ${savings} ₽ в месяц. `;
+      analysis += `Конечно, стоит это делать только для тех сервисов, которыми вы пользуетесь регулярно. `;
+    }
+
+    analysis += `\n\n🔍 Заметил несколько моментов для размышления:\n`;
+    
+    if (hasNetflix && hasYouTube) {
+      analysis += `• У вас есть и Netflix, и YouTube Premium — это отличное сочетание для разнообразного контента\n`;
+    }
+    
+    if (categories.length > 3) {
+      analysis += `• Ваши подписки охватывают ${categories.length} категорий — это показывает широкий спектр интересов\n`;
+    }
+    
+    if (subscriptions.length > 5) {
+      analysis += `• ${subscriptions.length} активных подписок — довольно много, стоит периодически проверять, всеми ли вы пользуетесь\n`;
+    }
+
+    // Персональные рекомендации
+    analysis += `\n\n✨ Возможно, вам были бы интересны:\n`;
+    
+    if (!hasSpotify && hasYouTube) {
+      analysis += `• **Spotify Premium** — отличное дополнение к YouTube для музыки без рекламы\n`;
+    }
+    
+    if (hasWork && !names.some(n => n.toLowerCase().includes('notion'))) {
+      analysis += `• **Notion** — мощный инструмент для организации работы и заметок\n`;
+    }
+    
+    if (hasGaming && !names.some(n => n.toLowerCase().includes('discord'))) {
+      analysis += `• **Discord Nitro** — для улучшенного общения с друзьями по играм\n`;
+    }
+    
+    if (!hasWork && !hasGaming && totalMonthly < 3000) {
+      analysis += `• **Adobe Creative Cloud** — если интересует дизайн или фото\n`;
+      analysis += `• **Skillbox или GeekBrains** — для изучения новых навыков\n`;
+    }
+
+    analysis += `\n🎯 В целом, у вас хорошо сбалансированный набор подписок. Главное — периодически пересматривать список и отменять то, чем не пользуетесь. Удачного управления подписками!`;
+
+    return analysis;
   }
 }
 

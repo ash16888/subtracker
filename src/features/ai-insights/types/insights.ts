@@ -4,7 +4,8 @@ export type InsightType =
   | 'warning' 
   | 'trend'
   | 'forecast'
-  | 'category';
+  | 'category'
+  | 'analysis';
 
 export type InsightPriority = 'high' | 'medium' | 'low';
 
