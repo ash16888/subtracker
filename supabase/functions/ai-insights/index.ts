@@ -58,6 +58,14 @@ serve(async (req) => {
 
 
     const aiResult = await openaiResponse.json()
+    
+    console.log('OpenAI API response status:', openaiResponse.status)
+    console.log('Raw AI response:', aiResult.choices?.[0]?.message?.content?.substring(0, 500) + '...')
+    
+    if (!aiResult.choices?.[0]?.message?.content) {
+      throw new Error('Invalid AI response format')
+    }
+    
     const insights = parseAIResponse(aiResult.choices[0].message.content)
 
     return new Response(
@@ -72,9 +80,10 @@ serve(async (req) => {
   }
 })
 
-function generatePrompt(subscriptions: any[]) {
+function generatePrompt(subscriptions: Record<string, unknown>[]) {
   const totalMonthly = subscriptions.reduce((sum, sub) => {
-    return sum + (sub.billing_period === 'yearly' ? sub.amount / 12 : sub.amount)
+    const amount = Number(sub.amount) || 0
+    return sum + (sub.billing_period === 'yearly' ? amount / 12 : amount)
   }, 0)
 
   return `
@@ -106,21 +115,51 @@ ${subscriptions.map(sub => `
 - potentialSavings: потенциальная экономия в рублях/месяц (если применимо)
 - affectedSubscriptions: список затронутых подписок
 
-Отвечай только JSON без дополнительного текста.
+ВАЖНО: Отвечай ТОЛЬКО валидным JSON массивом без markdown блоков, без комментариев и без дополнительного текста. Начинай ответ сразу с [ и заканчивай ].
   `
 }
 
 function parseAIResponse(response: string) {
   try {
-    const insights = JSON.parse(response)
-    return insights.map((insight: any, index: number) => ({
+    // Очищаем ответ от markdown блоков и лишних символов
+    let cleanResponse = response.trim()
+    
+    // Удаляем markdown блоки ```json и ```
+    if (cleanResponse.startsWith('```json')) {
+      cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+    } else if (cleanResponse.startsWith('```')) {
+      cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/\s*```$/, '')
+    }
+    
+    // Удаляем возможные лишние символы в начале и конце
+    cleanResponse = cleanResponse.trim()
+    
+    console.log('Cleaned AI response:', cleanResponse.substring(0, 200) + '...')
+    
+    const insights = JSON.parse(cleanResponse)
+    
+    // Проверяем, что это массив
+    const insightsArray = Array.isArray(insights) ? insights : [insights]
+    
+    return insightsArray.map((insight: Record<string, unknown>, index: number) => ({
       ...insight,
-      id: `ai-${index}`,
+      id: `ai-${Date.now()}-${index}`,
       createdAt: new Date()
     }))
   } catch (error) {
     console.error('Failed to parse AI response:', error)
-    return []
+    console.error('Raw response:', response)
+    
+    // Возвращаем базовый инсайт при ошибке парсинга
+    return [{
+      id: `fallback-${Date.now()}`,
+      type: 'warning',
+      priority: 'medium',
+      title: 'Анализ временно недоступен',
+      description: 'Не удалось обработать ответ AI. Попробуйте позже.',
+      actionItems: ['Повторите запрос через несколько минут'],
+      createdAt: new Date()
+    }]
   }
 }
 
