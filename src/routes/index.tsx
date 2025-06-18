@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout'
 import { LoginPage } from '../pages/LoginPage'
 import { DashboardPage } from '../pages/DashboardPage'
 import { SettingsPage } from '../pages/SettingsPage'
+import { DemoAIInsightsPage } from '../pages/DemoAIInsightsPage'
 import { LoadingSpinner } from '../components/LoadingSpinner'
 
 export function AppRoutes() {
@@ -16,6 +17,7 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/" />} />
+      <Route path="/demo" element={<DemoAIInsightsPage />} />
       <Route
         path="/"
         element={

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/useAuth'
 import { formatCurrency } from '../lib/utils/calculations'
 import { getCategoryIcon } from '../utils/categoryIcons'
@@ -54,6 +55,12 @@ export function LoginPage() {
               <h1 className="text-2xl font-bold gradient-text">SubTracker</h1>
             </div>
             <div className="flex items-center space-x-4">
+              <Link
+                to="/demo"
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Демо AI инсайтов
+              </Link>
               {error && (
                 <div className="text-sm text-red-600">{error}</div>
               )}
@@ -141,11 +148,17 @@ export function LoginPage() {
             <div className="text-center">
               <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-amber-500/25">
                 <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
               </div>
-              <h4 className="text-lg font-semibold text-gray-900 mb-2">Контроль расходов</h4>
-              <p className="text-gray-600">Отслеживайте ежемесячные и годовые траты на подписки</p>
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">AI Инсайты NEW!</h4>
+              <p className="text-gray-600">Получайте персонализированные рекомендации по оптимизации подписок</p>
+              <Link
+                to="/demo"
+                className="mt-3 inline-flex items-center text-sm font-medium text-amber-600 hover:text-amber-700 transition-colors"
+              >
+                Попробовать демо →
+              </Link>
             </div>
           </div>
         </div>
