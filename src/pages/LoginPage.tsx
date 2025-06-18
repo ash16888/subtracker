@@ -55,12 +55,6 @@ export function LoginPage() {
               <h1 className="text-2xl font-bold gradient-text">SubTracker</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Link
-                to="/demo"
-                className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Демо AI инсайтов
-              </Link>
               {error && (
                 <div className="text-sm text-red-600">{error}</div>
               )}
