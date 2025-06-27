@@ -1,41 +1,6 @@
 import { supabase } from '../lib/supabase'
 import type { Session } from '@supabase/supabase-js'
-import { ensureGoogleApisLoaded } from './googleAuthLoader'
 
-// Типы для Google Identity Services API
-interface TokenResponse {
-  access_token?: string
-  expires_in?: number
-  error?: string
-}
-
-interface TokenClientConfig {
-  client_id: string
-  scope: string
-  prompt?: string
-  callback: (response: TokenResponse) => void
-  error_callback: (error: unknown) => void
-}
-
-interface TokenClient {
-  requestAccessToken(): void
-}
-
-interface GoogleAccounts {
-  oauth2: {
-    initTokenClient(config: TokenClientConfig): TokenClient
-  }
-}
-
-interface GoogleAPI {
-  accounts: GoogleAccounts
-}
-
-declare global {
-  interface Window {
-    google: GoogleAPI | undefined
-  }
-}
 
 interface CalendarEvent {
   summary: string
@@ -58,6 +23,7 @@ interface CalendarEvent {
 }
 
 class GoogleCalendarService {
+  // @ts-ignore - используется для кэширования сессии
   private session: Session | null = null
   private tokenExpiresAt: number = 0
   private refreshAttempts: number = 0
@@ -69,93 +35,58 @@ class GoogleCalendarService {
     return session
   }
 
-  private async refreshAccessToken(promptType: 'silent' | 'consent' | 'select_account' = 'silent'): Promise<string | null> {
+  private async refreshAccessToken(): Promise<string | null> {
     try {
-      // Убеждаемся, что Google APIs загружены
-      const apisLoaded = await ensureGoogleApisLoaded()
-      if (!apisLoaded) {
-        console.error('Failed to load Google APIs')
+      console.log('Attempting token refresh via Supabase session refresh...')
+      
+      // Получаем текущую сессию
+      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError) {
+        console.error('Error getting current session:', sessionError)
         return null
       }
 
-      // Проверяем, загружен ли Google Identity Services
-      if (typeof window === 'undefined' || !window.google || !window.google.accounts || !window.google.accounts.oauth2) {
-        console.error('Google Identity Services not available')
+      if (!currentSession) {
+        console.warn('No active session found, user needs to re-authenticate')
         return null
       }
 
-      return new Promise((resolve) => {
-        let tokenResolved = false
+      // Пытаемся обновить сессию через Supabase
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+      
+      if (refreshError) {
+        console.error('Session refresh failed:', refreshError)
         
-        // Увеличиваем тайм-аут до 30 секунд
-        const timeout = setTimeout(() => {
-          if (!tokenResolved) {
-            console.warn(`Token refresh timeout for prompt type: ${promptType}`)
-            tokenResolved = true
-            resolve(null)
-          }
-        }, 30000)
-
-        try {
-          const requestConfig: TokenClientConfig = {
-            client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
-            callback: async (response: TokenResponse) => {
-              if (tokenResolved) return
-              tokenResolved = true
-              clearTimeout(timeout)
-              
-              try {
-                if (response.access_token) {
-                  // Обновляем токен в локальной сессии
-                  if (this.session) {
-                    this.session.provider_token = response.access_token
-                    this.tokenExpiresAt = Date.now() + ((response.expires_in || 3600) * 1000)
-                    // Сохраняем время истечения в localStorage для восстановления
-                    localStorage.setItem('subtracker-token-expires', this.tokenExpiresAt.toString())
-                  }
-                  this.refreshAttempts = 0 // Reset attempts on success
-                  console.log(`Token refresh successful with prompt: ${promptType}`)
-                  resolve(response.access_token)
-                } else {
-                  console.warn(`No access token in response for prompt: ${promptType}`, response)
-                  resolve(null)
-                }
-              } catch (error) {
-                console.error('Error processing token response:', error)
-                resolve(null)
-              }
-            },
-            error_callback: (error: unknown) => {
-              if (tokenResolved) return
-              tokenResolved = true
-              clearTimeout(timeout)
-              console.warn(`Token refresh failed for prompt ${promptType}:`, error)
-              resolve(null)
-            }
-          }
-
-          // Настраиваем prompt в зависимости от типа
-          if (promptType === 'silent') {
-            // Не добавляем prompt для тихого обновления
-          } else if (promptType === 'consent') {
-            requestConfig.prompt = 'consent'
-          } else if (promptType === 'select_account') {
-            requestConfig.prompt = 'select_account'
-          }
-
-          const tokenClient = window.google!.accounts.oauth2.initTokenClient(requestConfig)
+        // Если Supabase не может обновить токен, пользователю нужно войти заново
+        if (refreshError.message?.includes('refresh_token_not_found') || 
+            refreshError.message?.includes('invalid_grant')) {
+          console.warn('Refresh token expired, user needs to re-authenticate')
           
-          // Запрашиваем новый токен
-          tokenClient.requestAccessToken()
-        } catch (error) {
-          if (tokenResolved) return
-          tokenResolved = true
-          clearTimeout(timeout)
-          console.error('Error initializing token client:', error)
-          resolve(null)
+          // Перенаправляем на страницу входа
+          window.location.href = '/login'
+          return null
         }
-      })
+        
+        return null
+      }
+
+      if (!refreshedSession?.provider_token) {
+        console.warn('No provider token in refreshed session')
+        return null
+      }
+
+      // Обновляем локальную сессию и время истечения
+      this.session = refreshedSession
+      
+      // Устанавливаем время истечения токена (обычно Google токены действуют 1 час)
+      this.tokenExpiresAt = Date.now() + (3600 * 1000) // 1 час
+      localStorage.setItem('subtracker-token-expires', this.tokenExpiresAt.toString())
+      
+      this.refreshAttempts = 0 // Reset attempts on success
+      console.log('Token refresh successful via Supabase')
+      
+      return refreshedSession.provider_token
     } catch (error) {
       console.error('Error in refreshAccessToken:', error)
       return null
@@ -181,35 +112,30 @@ class GoogleCalendarService {
     if (this.tokenExpiresAt && Date.now() > this.tokenExpiresAt - 300000) {
       console.log('Token is expiring soon, attempting refresh...')
       
-      // Пробуем разные стратегии обновления с экспоненциальным backoff
-      const strategies: Array<'silent' | 'consent' | 'select_account'> = ['silent', 'consent', 'select_account']
+      // Ограничиваем количество попыток обновления
+      if (this.refreshAttempts >= this.maxRefreshAttempts) {
+        console.warn('Maximum refresh attempts reached')
+        return session.provider_token
+      }
       
-      for (let i = 0; i < strategies.length; i++) {
-        if (this.refreshAttempts >= this.maxRefreshAttempts) {
-          console.warn('Maximum refresh attempts reached')
-          break
-        }
+      this.refreshAttempts++
+      console.log(`Attempting token refresh (attempt ${this.refreshAttempts})`)
+      
+      const newToken = await this.refreshAccessToken()
+      
+      if (newToken) {
+        console.log('Token refresh successful')
+        return newToken
+      } else {
+        console.warn('Token refresh failed, using existing token')
         
-        const strategy = strategies[i]
-        this.refreshAttempts++
-        
-        console.log(`Attempting token refresh with strategy: ${strategy} (attempt ${this.refreshAttempts})`)
-        const newToken = await this.refreshAccessToken(strategy)
-        
-        if (newToken) {
-          console.log('Token refresh successful')
-          return newToken
-        }
-        
-        // Экспоненциальная задержка между попытками: 1s, 2s, 4s
-        if (i < strategies.length - 1) {
-          const delay = Math.pow(2, i) * 1000
+        // Если не удалось обновить токен, попробуем подождать перед следующей попыткой
+        if (this.refreshAttempts < this.maxRefreshAttempts) {
+          const delay = Math.pow(2, this.refreshAttempts - 1) * 1000 // 1s, 2s, 4s
           console.log(`Waiting ${delay}ms before next attempt...`)
           await new Promise(resolve => setTimeout(resolve, delay))
         }
       }
-      
-      console.error('All token refresh strategies failed')
     }
     
     return session.provider_token
