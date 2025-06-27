@@ -20,7 +20,7 @@ export const useAIInsights = () => {
         const parsed = JSON.parse(cached);
         const isExpired = new Date().getTime() - new Date(parsed.timestamp).getTime() > INSIGHTS_CACHE_TIME;
         if (!isExpired) {
-          return parsed.insights.map((insight: any) => ({
+          return parsed.insights.map((insight: AIInsight) => ({
             ...insight,
             createdAt: new Date(insight.createdAt)
           }));

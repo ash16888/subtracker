@@ -24,7 +24,20 @@ export const subscriptionSchema = z.object({
   google_calendar_event_id: z.string().nullable().optional(),
 })
 
+export const subscriptionFormSchema = z.object({
+  name: z.string().min(1, 'Название обязательно'),
+  amount: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
+    message: 'Сумма должна быть положительным числом',
+  }),
+  currency: z.string().min(1, 'Валюта обязательна'),
+  billing_period: z.enum(['monthly', 'yearly']),
+  next_payment_date: z.string().min(1, 'Дата обязательна'),
+  category: z.string().optional(),
+  url: z.string().url('Неверный формат URL').optional().or(z.literal('')),
+})
+
 export type Subscription = z.infer<typeof subscriptionSchema>
+export type SubscriptionFormData = z.infer<typeof subscriptionFormSchema>
 
 export const CATEGORIES = [
   'Мультисервис',

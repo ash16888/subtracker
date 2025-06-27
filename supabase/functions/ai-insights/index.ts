@@ -28,7 +28,7 @@ serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    const { subscriptions, userId } = await req.json()
+    const { subscriptions } = await req.json()
 
     // Выберите один из AI провайдеров:
 
@@ -130,7 +130,6 @@ function generatePrompt(subscriptions: Record<string, unknown>[]) {
   }, 0)
 
   const categories = [...new Set(subscriptions.map(sub => sub.category).filter(Boolean))]
-  const subscriptionNames = subscriptions.map(sub => sub.name).join(', ')
 
   return `
 Ты персональный финансовый консультант. Проанализируй подписки пользователя и напиши дружелюбный анализ в виде связного текста, органично включив в него все инсайты и рекомендации.

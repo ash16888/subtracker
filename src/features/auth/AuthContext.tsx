@@ -13,41 +13,49 @@ interface AuthContextType {
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
+type AuthProviderProps = {
+  children: React.ReactNode
+  initialUser?: User | null
+  initialSession?: Session | null
+  initialLoading?: boolean
+}
+
+export function AuthProvider({ 
+  children, 
+  initialUser = null, 
+  initialSession = null, 
+  initialLoading = true 
+}: AuthProviderProps) {
+  const [user, setUser] = useState<User | null>(initialUser)
+  const [session, setSession] = useState<Session | null>(initialSession)
+  const [loading, setLoading] = useState(initialLoading)
 
   useEffect(() => {
+    if (initialUser !== null || initialSession !== null || initialLoading === false) {
+      return
+    }
+
     let mounted = true
 
     const initializeAuth = async () => {
       try {
-        // Проверяем сохраненную сессию
         const { data: { session: storedSession }, error } = await supabase.auth.getSession()
         
         if (mounted) {
           if (error) {
-            // Error restoring session
-            // Очищаем невалидную сессию
             await supabase.auth.signOut()
           } else if (storedSession) {
-            // Проверяем, что сессия все еще валидна
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
               setSession(storedSession)
               setUser(user)
-              // Session restored successfully
             } else {
-              // Сессия невалидна
-              // Session invalid, signing out
               await supabase.auth.signOut()
             }
           }
           setLoading(false)
         }
-      } catch (error) {
-        // Error initializing auth
+      } catch {
         if (mounted) {
           setLoading(false)
         }
@@ -56,10 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     initializeAuth()
 
-    // Подписываемся на изменения состояния авторизации
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Auth state changed
-      
       if (mounted) {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           setSession(session)
@@ -67,7 +72,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (event === 'SIGNED_OUT') {
           setSession(null)
           setUser(null)
-          // Очищаем сохраненное время истечения токена
           localStorage.removeItem('subtracker-token-expires')
         } else if (event === 'USER_UPDATED') {
           setSession(session)
@@ -81,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       mounted = false
       subscription.unsubscribe()
     }
-  }, [])
+  }, [initialUser, initialSession, initialLoading])
 
 
   const signInWithGoogle = async () => {

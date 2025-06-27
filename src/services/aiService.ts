@@ -1,4 +1,5 @@
 import type { GenerateInsightsRequest, GenerateInsightsResponse, AIInsight } from '../features/ai-insights/types/insights';
+import type { Subscription } from '../types/subscription';
 import { supabase } from '../lib/supabase';
 
 export class AIService {
@@ -108,7 +109,7 @@ export class AIService {
   }
 
   private generatePersonalizedAnalysis(
-    subscriptions: any[],
+    subscriptions: Subscription[],
     names: string[],
     categories: string[],
     totalMonthly: number,

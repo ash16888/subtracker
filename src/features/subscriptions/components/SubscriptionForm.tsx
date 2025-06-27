@@ -1,26 +1,12 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { format } from 'date-fns'
 import { useCreateSubscriptionWithCalendar, useUpdateSubscriptionWithCalendar } from '../../calendar/hooks/useCalendarSubscriptions'
-import { CATEGORIES } from '../../../types/subscription'
+import { CATEGORIES, subscriptionFormSchema, type SubscriptionFormData } from '../../../types/subscription'
 import type { Database } from '../../../types/database.types'
 
 type Subscription = Database['public']['Tables']['subscriptions']['Row']
 
-const formSchema = z.object({
-  name: z.string().min(1, 'Название обязательно'),
-  amount: z.string().refine((val) => !isNaN(Number(val)) && Number(val) > 0, {
-    message: 'Сумма должна быть положительным числом',
-  }),
-  currency: z.string().min(1, 'Валюта обязательна'),
-  billing_period: z.enum(['monthly', 'yearly']),
-  next_payment_date: z.string().min(1, 'Дата обязательна'),
-  category: z.string().optional(),
-  url: z.string().url('Неверный формат URL').optional().or(z.literal('')),
-})
-
-type FormData = z.infer<typeof formSchema>
 
 interface SubscriptionFormProps {
   onClose: () => void
@@ -36,8 +22,8 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+  } = useForm<SubscriptionFormData>({
+    resolver: zodResolver(subscriptionFormSchema),
     defaultValues: isEditing ? {
       name: subscription.name,
       amount: subscription.amount.toString(),
@@ -53,7 +39,7 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
     },
   })
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: SubscriptionFormData) => {
     try {
       if (isEditing) {
         await updateSubscription.mutateAsync({

@@ -232,7 +232,7 @@ class GoogleCalendarService {
 
       const result = await this.makeCalendarRequest('POST', 'calendars/primary/events', event)
       return (result as { id: string }).id
-    } catch (error) {
+    } catch {
       return null
     }
   }
@@ -268,7 +268,7 @@ class GoogleCalendarService {
 
       await this.makeCalendarRequest('PUT', `calendars/primary/events/${eventId}`, updatedEvent)
       return true
-    } catch (error) {
+    } catch {
       return false
     }
   }
@@ -277,7 +277,7 @@ class GoogleCalendarService {
     try {
       await this.makeCalendarRequest('DELETE', `calendars/primary/events/${eventId}`)
       return true
-    } catch (error) {
+    } catch {
       return false
     }
   }

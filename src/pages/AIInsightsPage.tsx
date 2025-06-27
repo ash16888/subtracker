@@ -4,6 +4,7 @@ import { useSubscriptions } from '../features/subscriptions/hooks/useSubscriptio
 import { useAIInsights } from '../features/ai-insights/hooks/useAIInsights';
 import { GenerateInsightsButton } from '../features/ai-insights/components/GenerateInsightsButton';
 import { InsightsList } from '../features/ai-insights/components/InsightsList';
+import type { Subscription } from '../types/subscription';
 
 export const AIInsightsPage: React.FC = () => {
   const { user } = useAuth();
@@ -22,7 +23,7 @@ export const AIInsightsPage: React.FC = () => {
 
     const request = {
       userId: user.id,
-      subscriptions: subscriptions.map((sub: any) => ({
+      subscriptions: subscriptions.map((sub: Subscription) => ({
         id: sub.id,
         name: sub.name,
         amount: sub.amount,
