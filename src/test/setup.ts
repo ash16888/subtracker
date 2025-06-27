@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom'
+import { vi } from 'vitest'
 
 // Mock environment variables for tests
 process.env.VITE_SUPABASE_URL = 'http://localhost:54321'
@@ -58,6 +59,12 @@ global.IntersectionObserver = class IntersectionObserver {
   observe = vi.fn()
   disconnect = vi.fn()
   unobserve = vi.fn()
+  root = null
+  rootMargin = ''
+  thresholds = []
+  takeRecords = vi.fn(() => [])
+  
+  constructor() {}
 }
 
 // Mock ResizeObserver
@@ -65,4 +72,6 @@ global.ResizeObserver = class ResizeObserver {
   observe = vi.fn()
   disconnect = vi.fn()
   unobserve = vi.fn()
+  
+  constructor() {}
 }

@@ -23,16 +23,18 @@ export const AIInsightsPage: React.FC = () => {
 
     const request = {
       userId: user.id,
-      subscriptions: subscriptions.map((sub: Subscription) => ({
-        id: sub.id,
-        name: sub.name,
-        amount: sub.amount,
-        currency: sub.currency,
-        billing_period: sub.billing_period,
-        next_payment_date: sub.next_payment_date,
-        category: sub.category,
-        url: sub.url
-      }))
+      subscriptions: subscriptions
+        .filter((sub: Subscription) => sub.id) // Filter out any subscriptions without IDs
+        .map((sub: Subscription) => ({
+          id: sub.id!,
+          name: sub.name,
+          amount: sub.amount,
+          currency: sub.currency,
+          billing_period: sub.billing_period,
+          next_payment_date: sub.next_payment_date,
+          category: sub.category || undefined,
+          url: sub.url || undefined
+        }))
     };
 
     generateInsights(request);

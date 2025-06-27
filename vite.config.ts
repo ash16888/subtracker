@@ -10,6 +10,9 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     globals: true,
     css: true,
+    typecheck: {
+      tsconfig: './tsconfig.vitest.json'
+    },
   },
   server: {
     host: true,
