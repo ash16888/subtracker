@@ -343,7 +343,7 @@ describe('StatsCards', () => {
   })
 
   describe('useMemo Optimization', () => {
-    it.skip('should recalculate stats when subscriptions change', () => {
+    it('should recalculate stats when subscriptions change', () => {
       const initialSubscriptions = [
         createMockSubscription({ amount: 500, name: 'Service 1' })
       ]

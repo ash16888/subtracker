@@ -1,8 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { AIService, aiService } from './aiService'
-import type { GenerateInsightsRequest, GenerateInsightsResponse } from '../features/ai-insights/types/insights'
+import type { GenerateInsightsRequest } from '../features/ai-insights/types/insights'
 import type { Subscription } from '../types/subscription'
 import { supabase } from '../lib/supabase'
+
+// Type for testing private methods
+interface AIServiceForTesting {
+  generateDemoInsights(request: GenerateInsightsRequest): unknown
+  generatePersonalizedAnalysis(
+    subscriptions: Subscription[], 
+    names: string[], 
+    categories: string[], 
+    totalMonthly: number, 
+    monthlyCount: number, 
+    savings: number
+  ): string
+}
 
 // Mock Supabase
 vi.mock('../lib/supabase', () => ({
@@ -247,7 +260,7 @@ describe('AIService', () => {
         userId: 'user1'
       }
 
-      const result = (service as any).generateDemoInsights(request)
+      const result = (service as unknown as AIServiceForTesting).generateDemoInsights(request)
 
       expect(result.insights).toHaveLength(1)
       expect(result.insights[0].potentialSavings).toBe(0)
@@ -291,7 +304,7 @@ describe('AIService', () => {
         userId: 'user1'
       }
 
-      const result = (service as any).generateDemoInsights(request)
+      const result = (service as unknown as AIServiceForTesting).generateDemoInsights(request)
       
       expect(result.insights[0].description).toContain('2000 ₽') // 1000 + 12000/12
     })
@@ -319,7 +332,7 @@ describe('AIService', () => {
         userId: 'user1'
       }
 
-      const result = (service as any).generateDemoInsights(request)
+      const result = (service as unknown as AIServiceForTesting).generateDemoInsights(request)
       
       // 15% скидка: 1000 * 12 * 0.15 / 12 = 150
       expect(result.insights[0].potentialSavings).toBe(150)
@@ -362,7 +375,7 @@ describe('AIService', () => {
         userId: 'user1'
       }
 
-      const result = (service as any).generateDemoInsights(request)
+      const result = (service as unknown as AIServiceForTesting).generateDemoInsights(request)
       
       expect(result.insights[0].description).toContain('Netflix')
       expect(result.insights[0].description).toContain('Spotify')
@@ -375,7 +388,7 @@ describe('AIService', () => {
       const names = ['Netflix', 'Spotify Premium']
       const categories = ['Развлечения']
       
-      const analysis = (service as any).generatePersonalizedAnalysis(
+      const analysis = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, names, categories, 1300, 2, 200
       )
       
@@ -387,7 +400,7 @@ describe('AIService', () => {
       const names = ['YouTube Premium']
       const categories = ['Развлечения']
       
-      const analysis = (service as any).generatePersonalizedAnalysis(
+      const analysis = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, names, categories, 500, 1, 75
       )
       
@@ -399,7 +412,7 @@ describe('AIService', () => {
       const names = ['Steam']
       const categories = ['Игры', 'Развлечения']
       
-      const analysis = (service as any).generatePersonalizedAnalysis(
+      const analysis = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, names, categories, 800, 1, 100
       )
       
@@ -411,7 +424,7 @@ describe('AIService', () => {
       const names = ['Microsoft Office']
       const categories = ['Работа']
       
-      const analysis = (service as any).generatePersonalizedAnalysis(
+      const analysis = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, names, categories, 1200, 1, 150
       )
       
@@ -422,19 +435,19 @@ describe('AIService', () => {
       const subscriptions: Subscription[] = []
       
       // Low spending
-      const lowSpendingAnalysis = (service as any).generatePersonalizedAnalysis(
+      const lowSpendingAnalysis = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, [], [], 1500, 0, 0
       )
       expect(lowSpendingAnalysis).toContain('разумная сумма')
       
       // Medium spending
-      const mediumSpendingAnalysis = (service as any).generatePersonalizedAnalysis(
+      const mediumSpendingAnalysis = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, [], [], 3500, 0, 0
       )
       expect(mediumSpendingAnalysis).toContain('средний уровень')
       
       // High spending
-      const highSpendingAnalysis = (service as any).generatePersonalizedAnalysis(
+      const highSpendingAnalysis = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, [], [], 6000, 0, 0
       )
       expect(highSpendingAnalysis).toContain('довольно высокая сумма')
@@ -443,7 +456,7 @@ describe('AIService', () => {
     it('should suggest annual plans for monthly subscriptions', () => {
       const subscriptions: Subscription[] = []
       
-      const analysis = (service as any).generatePersonalizedAnalysis(
+      const analysis = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, [], [], 2000, 3, 300
       )
       
@@ -455,19 +468,19 @@ describe('AIService', () => {
       const subscriptions: Subscription[] = []
       
       // Has YouTube but not Spotify
-      const analysisSpotify = (service as any).generatePersonalizedAnalysis(
+      const analysisSpotify = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, ['YouTube Premium'], [], 500, 1, 75
       )
       expect(analysisSpotify).toContain('Spotify Premium')
       
       // Has work tools but not Notion
-      const analysisNotion = (service as any).generatePersonalizedAnalysis(
+      const analysisNotion = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, ['Microsoft Office'], ['Работа'], 1000, 1, 150
       )
       expect(analysisNotion).toContain('Notion')
       
       // Has gaming but not Discord
-      const analysisDiscord = (service as any).generatePersonalizedAnalysis(
+      const analysisDiscord = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, ['Steam'], ['Игры'], 800, 1, 100
       )
       expect(analysisDiscord).toContain('Discord Nitro')
@@ -476,7 +489,7 @@ describe('AIService', () => {
     it('should suggest creative and learning tools for light users', () => {
       const subscriptions: Subscription[] = []
       
-      const analysis = (service as any).generatePersonalizedAnalysis(
+      const analysis = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, ['Basic Service'], [], 2500, 1, 100
       )
       
@@ -500,7 +513,7 @@ describe('AIService', () => {
         updated_at: '2024-01-01'
       }))
       
-      const analysis = (service as any).generatePersonalizedAnalysis(
+      const analysis = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, [], ['Развлечения', 'Работа', 'Игры', 'ИИ'], 3500, 0, 0
       )
       
@@ -511,7 +524,7 @@ describe('AIService', () => {
     it('should always end with encouraging message', () => {
       const subscriptions: Subscription[] = []
       
-      const analysis = (service as any).generatePersonalizedAnalysis(
+      const analysis = (service as unknown as AIServiceForTesting).generatePersonalizedAnalysis(
         subscriptions, [], [], 1000, 0, 0
       )
       

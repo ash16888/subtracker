@@ -11,6 +11,26 @@ import {
 } from './useSubscriptions'
 import type { ReactNode } from 'react'
 
+// Type for mocking useAuth
+type MockAuthReturn = {
+  user: { id: string } | null
+  loading: boolean
+  signInWithGoogle: () => Promise<void>
+  reauthorizeGoogle: () => Promise<void>
+  signOut: () => Promise<void>
+  session: unknown
+}
+
+// Type for mocking Supabase chain
+type MockSupabaseChain = {
+  select: (...args: unknown[]) => unknown
+  order: (...args: unknown[]) => unknown
+  eq: (...args: unknown[]) => unknown
+  insert: (...args: unknown[]) => unknown
+  update: (...args: unknown[]) => unknown
+  delete: (...args: unknown[]) => unknown
+}
+
 // Mock dependencies
 vi.mock('../../../lib/supabase', () => ({
   supabase: {
@@ -101,7 +121,14 @@ describe('useSubscriptions', () => {
 
   describe('useSubscriptions Query Hook', () => {
     it('should fetch subscriptions when user is authenticated', async () => {
-      vi.mocked(useAuth).mockReturnValue({ user: mockUser } as any)
+      vi.mocked(useAuth).mockReturnValue({ 
+        user: mockUser, 
+        loading: false, 
+        signInWithGoogle: vi.fn(), 
+        reauthorizeGoogle: vi.fn(), 
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
       
       const mockSupabaseChain = {
         select: vi.fn().mockReturnThis(),
@@ -111,7 +138,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useSubscriptions(), { wrapper })
@@ -127,7 +154,14 @@ describe('useSubscriptions', () => {
     })
 
     it('should return empty array when no user', async () => {
-      vi.mocked(useAuth).mockReturnValue({ user: null } as any)
+      vi.mocked(useAuth).mockReturnValue({ 
+        user: null, 
+        loading: false, 
+        signInWithGoogle: vi.fn(), 
+        reauthorizeGoogle: vi.fn(), 
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useSubscriptions(), { wrapper })
@@ -138,7 +172,14 @@ describe('useSubscriptions', () => {
     })
 
     it('should be disabled when no user', () => {
-      vi.mocked(useAuth).mockReturnValue({ user: null } as any)
+      vi.mocked(useAuth).mockReturnValue({ 
+        user: null, 
+        loading: false, 
+        signInWithGoogle: vi.fn(), 
+        reauthorizeGoogle: vi.fn(), 
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useSubscriptions(), { wrapper })
@@ -148,7 +189,14 @@ describe('useSubscriptions', () => {
     })
 
     it('should handle query errors', async () => {
-      vi.mocked(useAuth).mockReturnValue({ user: mockUser } as any)
+      vi.mocked(useAuth).mockReturnValue({ 
+        user: mockUser, 
+        loading: false, 
+        signInWithGoogle: vi.fn(), 
+        reauthorizeGoogle: vi.fn(), 
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
       
       const mockError = new Error('Database error')
       const mockSupabaseChain = {
@@ -159,7 +207,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useSubscriptions(), { wrapper })
@@ -172,7 +220,14 @@ describe('useSubscriptions', () => {
     })
 
     it('should use correct query key with user ID', () => {
-      vi.mocked(useAuth).mockReturnValue({ user: mockUser } as any)
+      vi.mocked(useAuth).mockReturnValue({ 
+        user: mockUser, 
+        loading: false, 
+        signInWithGoogle: vi.fn(), 
+        reauthorizeGoogle: vi.fn(), 
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
 
       const wrapper = createWrapper()
       renderHook(() => useSubscriptions(), { wrapper })
@@ -184,7 +239,14 @@ describe('useSubscriptions', () => {
 
   describe('useCreateSubscription Mutation Hook', () => {
     it('should create subscription successfully', async () => {
-      vi.mocked(useAuth).mockReturnValue({ user: mockUser } as any)
+      vi.mocked(useAuth).mockReturnValue({ 
+        user: mockUser, 
+        loading: false, 
+        signInWithGoogle: vi.fn(), 
+        reauthorizeGoogle: vi.fn(), 
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
       
       const mockSupabaseChain = {
         insert: vi.fn().mockReturnThis(),
@@ -195,7 +257,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useCreateSubscription(), { wrapper })
@@ -227,7 +289,14 @@ describe('useSubscriptions', () => {
     })
 
     it('should throw error when user not authenticated', async () => {
-      vi.mocked(useAuth).mockReturnValue({ user: null } as any)
+      vi.mocked(useAuth).mockReturnValue({ 
+        user: null, 
+        loading: false, 
+        signInWithGoogle: vi.fn(), 
+        reauthorizeGoogle: vi.fn(), 
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useCreateSubscription(), { wrapper })
@@ -254,7 +323,14 @@ describe('useSubscriptions', () => {
     })
 
     it('should handle database errors', async () => {
-      vi.mocked(useAuth).mockReturnValue({ user: mockUser } as any)
+      vi.mocked(useAuth).mockReturnValue({ 
+        user: mockUser, 
+        loading: false, 
+        signInWithGoogle: vi.fn(), 
+        reauthorizeGoogle: vi.fn(), 
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
       
       const mockError = new Error('Insert failed')
       const mockSupabaseChain = {
@@ -266,7 +342,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useCreateSubscription(), { wrapper })
@@ -289,7 +365,14 @@ describe('useSubscriptions', () => {
     })
 
     it('should invalidate queries on success', async () => {
-      vi.mocked(useAuth).mockReturnValue({ user: mockUser } as any)
+      vi.mocked(useAuth).mockReturnValue({ 
+        user: mockUser, 
+        loading: false, 
+        signInWithGoogle: vi.fn(), 
+        reauthorizeGoogle: vi.fn(), 
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
       
       const mockSupabaseChain = {
         insert: vi.fn().mockReturnThis(),
@@ -300,7 +383,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
@@ -351,7 +434,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useUpdateSubscription(), { wrapper })
@@ -387,7 +470,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useUpdateSubscription(), { wrapper })
@@ -417,7 +500,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
@@ -460,7 +543,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useDeleteSubscription(), { wrapper })
@@ -487,7 +570,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useDeleteSubscription(), { wrapper })
@@ -511,7 +594,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false }, mutations: { retry: false } }
@@ -544,10 +627,17 @@ describe('useSubscriptions', () => {
 
   describe('Loading and Error States', () => {
     it('should handle loading states correctly', async () => {
-      vi.mocked(useAuth).mockReturnValue({ user: mockUser } as any)
+      vi.mocked(useAuth).mockReturnValue({ 
+        user: mockUser, 
+        loading: false, 
+        signInWithGoogle: vi.fn(), 
+        reauthorizeGoogle: vi.fn(), 
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
       
       // Create a promise that we can control
-      let resolveQuery: (value: any) => void
+      let resolveQuery: (value: unknown) => void
       const queryPromise = new Promise(resolve => {
         resolveQuery = resolve
       })
@@ -557,7 +647,7 @@ describe('useSubscriptions', () => {
         order: vi.fn().mockReturnValue(queryPromise)
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useSubscriptions(), { wrapper })
@@ -577,7 +667,14 @@ describe('useSubscriptions', () => {
     })
 
     it('should handle mutation loading states', async () => {
-      vi.mocked(useAuth).mockReturnValue({ user: mockUser } as any)
+      vi.mocked(useAuth).mockReturnValue({ 
+        user: mockUser, 
+        loading: false, 
+        signInWithGoogle: vi.fn(), 
+        reauthorizeGoogle: vi.fn(), 
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
       
       const mockSupabaseChain = {
         insert: vi.fn().mockReturnThis(),
@@ -588,7 +685,7 @@ describe('useSubscriptions', () => {
         })
       }
       
-      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as any)
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
 
       const wrapper = createWrapper()
       const { result } = renderHook(() => useCreateSubscription(), { wrapper })

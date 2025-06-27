@@ -23,7 +23,8 @@ export class AIService {
 
     try {
       // Получаем текущую сессию пользователя
-      const { data: { session } } = await supabase.auth.getSession();
+      const sessionResult = await supabase.auth.getSession();
+      const session = sessionResult?.data?.session;
       
       if (!session) {
         console.warn('No active session, falling back to demo mode');

@@ -4,6 +4,7 @@ import {
   calculateNextPaymentDate,
   formatCurrency,
 } from './calculations'
+import type { Subscription } from '../../types/subscription'
 
 // Helper to freeze time consistently across tests
 const FIXED_NOW = new Date('2024-01-15T10:00:00Z') // mid-month in UTC
@@ -33,7 +34,7 @@ describe('calculateMonthlyTotal', () => {
         next_payment_date: '2024-01-20T12:00:00Z',
       },
     ]
-    expect(calculateMonthlyTotal(subs as any)).toBe(999)
+    expect(calculateMonthlyTotal(subs as Subscription[])).toBe(999)
   })
 
   it('converts yearly amount to monthly fraction when due this month', () => {
@@ -44,7 +45,7 @@ describe('calculateMonthlyTotal', () => {
         next_payment_date: '2024-01-02T00:00:00Z',
       },
     ]
-    expect(calculateMonthlyTotal(subs as any)).toBeCloseTo(1000) // 12000 / 12
+    expect(calculateMonthlyTotal(subs as Subscription[])).toBeCloseTo(1000) // 12000 / 12
   })
 
   it('ignores subscriptions whose next payment date is outside the current month', () => {
@@ -55,7 +56,7 @@ describe('calculateMonthlyTotal', () => {
         next_payment_date: '2024-02-01T00:00:00Z',
       },
     ]
-    expect(calculateMonthlyTotal(subs as any)).toBe(0)
+    expect(calculateMonthlyTotal(subs as Subscription[])).toBe(0)
   })
 
   it('includes boundary dates: first and last day of month', () => {
@@ -71,7 +72,7 @@ describe('calculateMonthlyTotal', () => {
         next_payment_date: '2024-01-30T12:00:00Z', // within month for sure
       },
     ]
-    expect(calculateMonthlyTotal(subs as any)).toBe(300)
+    expect(calculateMonthlyTotal(subs as Subscription[])).toBe(300)
   })
 
   it('handles mixed billing periods in same month', () => {
@@ -87,11 +88,11 @@ describe('calculateMonthlyTotal', () => {
         next_payment_date: '2024-01-25T00:00:00Z',
       },
     ]
-    expect(calculateMonthlyTotal(subs as any)).toBeCloseTo(1700) // 1200 + 6000/12 = 1700
+    expect(calculateMonthlyTotal(subs as Subscription[])).toBeCloseTo(1700) // 1200 + 6000/12 = 1700
   })
 
   it('returns 0 when subscription list is empty', () => {
-    expect(calculateMonthlyTotal([] as any)).toBe(0)
+    expect(calculateMonthlyTotal([] as Subscription[])).toBe(0)
   })
 })
 
