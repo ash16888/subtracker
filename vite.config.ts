@@ -13,6 +13,31 @@ export default defineConfig({
     typecheck: {
       tsconfig: './tsconfig.vitest.json'
     },
+    coverage: {
+      enabled: true,
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      reportsDirectory: './coverage',
+      exclude: [
+        'node_modules/**',
+        'src/test/**',
+        '**/*.d.ts',
+        '**/*.config.*',
+        '**/mockData/**',
+        'coverage/**',
+        'dist/**',
+        '**/*.test.*',
+        '**/*.spec.*',
+        '**/types/**',
+        'src/main.tsx',
+        'src/vite-env.d.ts'
+      ],
+      include: [
+        'src/**/*.{ts,tsx,js,jsx}'
+      ],
+      all: true,
+      clean: true
+    }
   },
   server: {
     host: true,
