@@ -21,15 +21,19 @@ interface TokenClient {
   requestAccessToken(): void
 }
 
+interface GoogleAccounts {
+  oauth2: {
+    initTokenClient(config: TokenClientConfig): TokenClient
+  }
+}
+
+interface GoogleAPI {
+  accounts: GoogleAccounts
+}
+
 declare global {
   interface Window {
-    google?: {
-      accounts?: {
-        oauth2?: {
-          initTokenClient(config: TokenClientConfig): TokenClient
-        }
-      }
-    }
+    google: GoogleAPI | undefined
   }
 }
 
@@ -75,7 +79,7 @@ class GoogleCalendarService {
       }
 
       // Проверяем, загружен ли Google Identity Services
-      if (typeof window === 'undefined' || !window.google?.accounts?.oauth2) {
+      if (typeof window === 'undefined' || !window.google || !window.google.accounts || !window.google.accounts.oauth2) {
         console.error('Google Identity Services not available')
         return null
       }
@@ -140,7 +144,7 @@ class GoogleCalendarService {
             requestConfig.prompt = 'select_account'
           }
 
-          const tokenClient = window.google.accounts.oauth2.initTokenClient(requestConfig)
+          const tokenClient = window.google!.accounts.oauth2.initTokenClient(requestConfig)
           
           // Запрашиваем новый токен
           tokenClient.requestAccessToken()
