@@ -37,56 +37,20 @@ class GoogleCalendarService {
 
   private async refreshAccessToken(): Promise<string | null> {
     try {
-      console.log('Attempting token refresh via Supabase session refresh...')
+      console.log('Google OAuth token expired, user needs to re-authenticate')
       
-      // Получаем текущую сессию
-      const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession()
+      // Google OAuth токены не могут быть обновлены без повторной авторизации
+      // Пользователь должен заново предоставить права доступа к Google Calendar
       
-      if (sessionError) {
-        console.error('Error getting current session:', sessionError)
-        return null
-      }
-
-      if (!currentSession) {
-        console.warn('No active session found, user needs to re-authenticate')
-        return null
-      }
-
-      // Пытаемся обновить сессию через Supabase
-      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession()
+      // Сбрасываем время истечения токена
+      this.tokenExpiresAt = 0
+      localStorage.removeItem('subtracker-token-expires')
       
-      if (refreshError) {
-        console.error('Session refresh failed:', refreshError)
-        
-        // Если Supabase не может обновить токен, пользователю нужно войти заново
-        if (refreshError.message?.includes('refresh_token_not_found') || 
-            refreshError.message?.includes('invalid_grant')) {
-          console.warn('Refresh token expired, user needs to re-authenticate')
-          
-          // Перенаправляем на страницу входа
-          window.location.href = '/login'
-          return null
-        }
-        
-        return null
-      }
-
-      if (!refreshedSession?.provider_token) {
-        console.warn('No provider token in refreshed session')
-        return null
-      }
-
-      // Обновляем локальную сессию и время истечения
-      this.session = refreshedSession
+      // Показываем пользователю сообщение о необходимости повторной авторизации
+      // Это будет обработано компонентом GoogleCalendarStatus
+      console.warn('Google Calendar access token expired. Please re-authorize access to Google Calendar.')
       
-      // Устанавливаем время истечения токена (обычно Google токены действуют 1 час)
-      this.tokenExpiresAt = Date.now() + (3600 * 1000) // 1 час
-      localStorage.setItem('subtracker-token-expires', this.tokenExpiresAt.toString())
-      
-      this.refreshAttempts = 0 // Reset attempts on success
-      console.log('Token refresh successful via Supabase')
-      
-      return refreshedSession.provider_token
+      return null
     } catch (error) {
       console.error('Error in refreshAccessToken:', error)
       return null
@@ -186,17 +150,25 @@ class GoogleCalendarService {
       return response.json()
     } catch (error) {
       // Обрабатываем сетевые ошибки (включая ERR_SOCKET_NOT_CONNECTED)
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        if (retry) {
-          // Сбрасываем время истечения чтобы форсировать обновление
-          this.tokenExpiresAt = 0
-          this.refreshAttempts = 0
+      if (error instanceof TypeError) {
+        const errorMessage = error.message.toLowerCase()
+        
+        if (errorMessage.includes('failed to fetch') || 
+            errorMessage.includes('socket') || 
+            errorMessage.includes('network')) {
           
-          const newToken = await this.getAccessToken()
-          if (newToken) {
-            // Добавляем небольшую задержку перед повторной попыткой
-            await new Promise(resolve => setTimeout(resolve, 1000))
+          console.warn(`Network error accessing Google Calendar: ${error.message}`)
+          
+          if (retry) {
+            console.log('Retrying request after network error...')
+            
+            // Добавляем задержку перед повторной попыткой
+            await new Promise(resolve => setTimeout(resolve, 2000))
+            
+            // Пытаемся еще раз без обновления токена
             return this.makeCalendarRequest(method, endpoint, body, false)
+          } else {
+            console.error('Network error persists after retry')
           }
         }
       }
@@ -294,17 +266,36 @@ class GoogleCalendarService {
     try {
       const accessToken = await this.getAccessToken()
       if (!accessToken) {
+        console.log('No access token available for Google Calendar')
         return false
       }
       
       await this.makeCalendarRequest('GET', 'calendars/primary')
       return true
     } catch (error) {
-      // Если это сетевая ошибка или ошибка токена, пробуем сбросить состояние
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        this.tokenExpiresAt = 0
-        this.refreshAttempts = 0
-        localStorage.removeItem('subtracker-token-expires')
+      // Логируем ошибку для диагностики
+      if (error instanceof Error) {
+        console.warn('Google Calendar access check failed:', error.message)
+        
+        // Если это сетевая ошибка, не сбрасываем токен сразу
+        if (error instanceof TypeError) {
+          const errorMessage = error.message.toLowerCase()
+          if (errorMessage.includes('failed to fetch') || 
+              errorMessage.includes('socket') || 
+              errorMessage.includes('network')) {
+            console.log('Network error detected, keeping token for retry')
+            // Не сбрасываем токен при сетевых ошибках
+            return false
+          }
+        }
+        
+        // Для других ошибок (401, 403) сбрасываем токен
+        if (error.message.includes('401') || error.message.includes('403')) {
+          console.log('Authorization error, clearing token')
+          this.tokenExpiresAt = 0
+          this.refreshAttempts = 0
+          localStorage.removeItem('subtracker-token-expires')
+        }
       }
       
       return false
