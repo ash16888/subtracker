@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../auth/useAuth'
+import { calculateNextPaymentDate } from '../../../lib/utils/calculations'
+import { isBefore, startOfDay } from 'date-fns'
 import type { Database } from '../../../types/database.types'
 
 type Subscription = Database['public']['Tables']['subscriptions']['Row']
@@ -21,7 +23,45 @@ export function useSubscriptions() {
         .order('next_payment_date', { ascending: true })
 
       if (error) throw error
-      return data as Subscription[]
+      
+      const subscriptions = data as Subscription[]
+      const now = startOfDay(new Date())
+      const updatedSubscriptions: Subscription[] = []
+      
+      // Check each subscription for past payment dates and auto-renew
+      for (const subscription of subscriptions) {
+        const paymentDate = startOfDay(new Date(subscription.next_payment_date))
+        
+        if (isBefore(paymentDate, now)) {
+          // Payment date is in the past, calculate new date
+          const newPaymentDate = calculateNextPaymentDate(paymentDate, subscription.billing_period)
+          
+          // Update the subscription in the database
+          const { data: updatedData, error: updateError } = await supabase
+            .from('subscriptions')
+            .update({ 
+              next_payment_date: newPaymentDate.toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', subscription.id)
+            .select()
+            .single()
+          
+          if (updateError) {
+            console.error('Failed to update subscription:', updateError)
+            updatedSubscriptions.push(subscription) // Keep original if update fails
+          } else {
+            updatedSubscriptions.push(updatedData as Subscription)
+          }
+        } else {
+          updatedSubscriptions.push(subscription)
+        }
+      }
+      
+      // Re-sort by next_payment_date after updates
+      return updatedSubscriptions.sort((a, b) => 
+        new Date(a.next_payment_date).getTime() - new Date(b.next_payment_date).getTime()
+      )
     },
     enabled: !!user,
   })

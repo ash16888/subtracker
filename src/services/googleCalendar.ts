@@ -23,7 +23,7 @@ interface CalendarEvent {
 }
 
 class GoogleCalendarService {
-  // @ts-ignore - используется для кэширования сессии
+  // @ts-expect-error - используется для кэширования сессии
   private session: Session | null = null
   private tokenExpiresAt: number = 0
   private refreshAttempts: number = 0

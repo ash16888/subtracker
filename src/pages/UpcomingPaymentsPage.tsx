@@ -35,6 +35,8 @@ export function UpcomingPaymentsPage() {
     subscriptions.forEach(sub => {
       const paymentDate = startOfDay(new Date(sub.next_payment_date))
       
+      // Since auto-renewal is now implemented, all dates should be in the future
+      // Group by time remaining from today
       if (paymentDate <= thirtyDaysFromNow) {
         groupedPayments.within30Days.push(sub)
       } else if (paymentDate <= ninetyDaysFromNow) {
