@@ -75,7 +75,7 @@ const mockSubscription = {
   amount: 999,
   currency: '₽',
   billing_period: 'monthly' as const,
-  next_payment_date: '2024-02-01T00:00:00Z',
+  next_payment_date: '2027-01-01T00:00:00Z',
   category: 'Развлечения',
   url: null,
   user_id: 'user-1',
