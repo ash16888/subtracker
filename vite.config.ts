@@ -1,5 +1,4 @@
-/// <reference types="vitest" />
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
@@ -35,7 +34,6 @@ export default defineConfig({
       include: [
         'src/**/*.{ts,tsx,js,jsx}'
       ],
-      all: true,
       clean: true
     }
   },
@@ -51,10 +49,10 @@ export default defineConfig({
     sourcemap: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          supabase: ['@supabase/supabase-js'],
-          ui: ['@hookform/resolvers', 'react-hook-form', 'zod']
+        manualChunks(id) {
+          if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) return 'vendor'
+          if (id.includes('@supabase/supabase-js')) return 'supabase'
+          if (id.includes('@hookform/resolvers') || id.includes('react-hook-form') || id.includes('zod')) return 'ui'
         }
       }
     }
