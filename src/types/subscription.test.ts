@@ -45,7 +45,7 @@ describe('Subscription validation behavior', () => {
       const result = subscriptionSchema.safeParse(invalidSubscription)
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.errors).toContainEqual(
+        expect(result.error.issues).toContainEqual(
           expect.objectContaining({
             path: ['amount'],
             message: 'Amount must be positive',
@@ -66,7 +66,7 @@ describe('Subscription validation behavior', () => {
       const result = subscriptionSchema.safeParse(invalidSubscription)
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.errors).toContainEqual(
+        expect(result.error.issues).toContainEqual(
           expect.objectContaining({
             path: ['name'],
             message: 'Name is required',
@@ -160,7 +160,7 @@ describe('Subscription validation behavior', () => {
       const result = subscriptionFormSchema.safeParse(formData)
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.errors).toContainEqual(
+        expect(result.error.issues).toContainEqual(
           expect.objectContaining({
             path: ['amount'],
             message: 'Сумма должна быть положительным числом',
@@ -209,7 +209,7 @@ describe('Subscription validation behavior', () => {
       const result = subscriptionFormSchema.safeParse(formData)
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.errors).toContainEqual(
+        expect(result.error.issues).toContainEqual(
           expect.objectContaining({
             path: ['url'],
             message: 'Неверный формат URL',
@@ -230,7 +230,7 @@ describe('Subscription validation behavior', () => {
       const result = subscriptionFormSchema.safeParse(formData)
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.errors).toContainEqual(
+        expect(result.error.issues).toContainEqual(
           expect.objectContaining({
             path: ['name'],
             message: 'Название обязательно',
@@ -251,7 +251,7 @@ describe('Subscription validation behavior', () => {
       const result = subscriptionFormSchema.safeParse(formData)
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.errors).toContainEqual(
+        expect(result.error.issues).toContainEqual(
           expect.objectContaining({
             path: ['currency'],
             message: 'Валюта обязательна',
@@ -272,7 +272,7 @@ describe('Subscription validation behavior', () => {
       const result = subscriptionFormSchema.safeParse(formData)
       expect(result.success).toBe(false)
       if (!result.success) {
-        expect(result.error.errors).toContainEqual(
+        expect(result.error.issues).toContainEqual(
           expect.objectContaining({
             path: ['next_payment_date'],
             message: 'Дата обязательна',
