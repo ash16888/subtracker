@@ -79,10 +79,20 @@ export function PieChart({ subscriptions }: PieChartProps) {
     )
   }
 
-  let currentAngle = 0
   const radius = 80
   const centerX = 100
   const centerY = 100
+
+  const { slices } = categoryData.reduce<{ slices: { path: string; color: string; category: string }[]; angle: number }>(
+    ({ slices, angle }, category) => {
+      const sliceAngle = (category.percentage / 100) * 360
+      return {
+        slices: [...slices, { path: createArcPath(centerX, centerY, radius, angle, angle + sliceAngle), color: category.color, category: category.category }],
+        angle: angle + sliceAngle,
+      }
+    },
+    { slices: [], angle: 0 }
+  )
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -90,16 +100,12 @@ export function PieChart({ subscriptions }: PieChartProps) {
       <div className="flex items-center justify-center">
         <div className="relative">
           <svg width="200" height="200" className="transform -rotate-90">
-            {categoryData.map((category) => {
-              const sliceAngle = (category.percentage / 100) * 360
-              const path = createArcPath(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle)
-              currentAngle += sliceAngle
-              
+            {slices.map((slice) => {
               return (
                 <path
-                  key={category.category}
-                  d={path}
-                  fill={category.color}
+                  key={slice.category}
+                  d={slice.path}
+                  fill={slice.color}
                   stroke="white"
                   strokeWidth="2"
                   className="hover:opacity-80 transition-opacity cursor-pointer"

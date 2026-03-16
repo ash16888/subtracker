@@ -9,12 +9,56 @@ type Subscription = Database['public']['Tables']['subscriptions']['Row']
 
 const CATEGORY_COLORS: Record<string, string> = {
   'Мультисервис': '#ef4444',
-  'Развлечения': '#f59e0b', 
+  'Развлечения': '#f59e0b',
   'Работа': '#3b82f6',
   'ИИ': '#10b981',
   'Игры': '#ec4899',
   'Связь': '#8b5cf6',
   'Другое': '#6b7280'
+}
+
+function PaymentGroup({ title, payments, bgColor, textColor }: {
+  title: string
+  payments: Subscription[]
+  bgColor: string
+  textColor: string
+}) {
+  if (payments.length === 0) return null
+
+  return (
+    <div className="bg-white rounded-lg shadow">
+      <div className={`${bgColor} ${textColor} px-6 py-4 rounded-t-lg`}>
+        <h3 className="text-lg font-medium">{title}</h3>
+        <p className="text-sm opacity-90">{payments.length} подписок</p>
+      </div>
+      <div className="p-6">
+        <ul className="space-y-4">
+          {payments.map((subscription) => (
+            <li key={subscription.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+              <div className="flex items-center">
+                <div
+                  className="w-4 h-4 rounded-full mr-3 flex-shrink-0"
+                  style={{ backgroundColor: CATEGORY_COLORS[subscription.category || 'Другое'] }}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900 truncate">{subscription.name}</p>
+                  <p className="text-sm text-gray-500">{subscription.category || 'Другое'}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4 flex-shrink-0">
+                <span className="text-sm font-medium text-gray-900">
+                  {formatCurrency(Number(subscription.amount), subscription.currency)}
+                </span>
+                <span className="text-sm text-gray-500">
+                  {format(new Date(subscription.next_payment_date), 'd MMM yyyy', { locale: ru })}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
 }
 
 export function UpcomingPaymentsPage() {
@@ -53,50 +97,6 @@ export function UpcomingPaymentsPage() {
 
     return groupedPayments
   }, [subscriptions])
-
-  const PaymentGroup = ({ title, payments, bgColor, textColor }: {
-    title: string
-    payments: Subscription[]
-    bgColor: string
-    textColor: string
-  }) => {
-    if (payments.length === 0) return null
-
-    return (
-      <div className="bg-white rounded-lg shadow">
-        <div className={`${bgColor} ${textColor} px-6 py-4 rounded-t-lg`}>
-          <h3 className="text-lg font-medium">{title}</h3>
-          <p className="text-sm opacity-90">{payments.length} подписок</p>
-        </div>
-        <div className="p-6">
-          <ul className="space-y-4">
-            {payments.map((subscription) => (
-              <li key={subscription.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-                <div className="flex items-center">
-                  <div 
-                    className="w-4 h-4 rounded-full mr-3 flex-shrink-0"
-                    style={{ backgroundColor: CATEGORY_COLORS[subscription.category || 'Другое'] }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 truncate">{subscription.name}</p>
-                    <p className="text-sm text-gray-500">{subscription.category || 'Другое'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4 flex-shrink-0">
-                  <span className="text-sm font-medium text-gray-900">
-                    {formatCurrency(Number(subscription.amount), subscription.currency)}
-                  </span>
-                  <span className="text-sm text-gray-500">
-                    {format(new Date(subscription.next_payment_date), 'd MMM yyyy', { locale: ru })}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-    )
-  }
 
   const totalUpcoming = useMemo(() => {
     const allUpcoming = [
