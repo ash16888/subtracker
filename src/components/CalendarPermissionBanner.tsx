@@ -16,7 +16,7 @@ export function CalendarPermissionBanner() {
       try {
         const accessible = await googleCalendarService.isCalendarAccessible()
         setHasCalendarAccess(accessible)
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error checking calendar access:', error)
         setHasCalendarAccess(false)
       }
@@ -29,7 +29,7 @@ export function CalendarPermissionBanner() {
     setIsLoading(true)
     try {
       await reauthorizeGoogle()
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error reauthorizing:', error)
     } finally {
       setIsLoading(false)

@@ -52,7 +52,7 @@ export class AIService {
 
       const result = await response.json();
       return result;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error generating insights:', error);
       // Fallback на демо-режим при ошибке
       console.warn('Falling back to demo mode due to error');

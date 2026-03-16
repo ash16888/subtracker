@@ -38,7 +38,7 @@ export const loadGoogleApis = (): Promise<void> => {
       }
       
       document.body.appendChild(gisScript)
-    } catch (error) {
+    } catch (error: unknown) {
       reject(error)
     }
   })
@@ -50,7 +50,7 @@ export const ensureGoogleApisLoaded = async (): Promise<boolean> => {
   try {
     await loadGoogleApis()
     return true
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Failed to load Google Identity Services:', error)
     return false
   }

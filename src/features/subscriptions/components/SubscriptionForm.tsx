@@ -64,7 +64,7 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
         })
       }
       onClose()
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Error ${isEditing ? 'updating' : 'creating'} subscription:`, error)
     }
   }

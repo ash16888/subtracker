@@ -2,6 +2,11 @@ import { useEffect, useCallback, useState } from 'react'
 import { useAuth } from '../features/auth/useAuth'
 import { googleCalendarService } from '../services/googleCalendar'
 import { toast } from 'sonner'
+import {
+  TOKEN_POLL_INTERVAL_MS,
+  TOKEN_EXPIRY_WARNING_SECONDS,
+  TOKEN_EXPIRY_CRITICAL_SECONDS,
+} from '../lib/constants'
 
 export function useTokenRefresh() {
   const { session } = useAuth()
@@ -30,7 +35,7 @@ export function useTokenRefresh() {
         toast.error('Не удалось обновить токен. Попробуйте войти заново.')
         return false
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error refreshing token:', error)
       toast.error('Ошибка при обновлении токена')
       return false
@@ -68,10 +73,10 @@ export function useTokenRefresh() {
       const status = await checkTokenStatus()
       
       // Если токен истекает менее чем через 10 минут, обновляем
-      if (status.hasToken && status.expiresIn !== null && status.expiresIn < 600) {
+      if (status.hasToken && status.expiresIn !== null && status.expiresIn < TOKEN_EXPIRY_WARNING_SECONDS) {
         await refreshToken()
       }
-    }, 5 * 60 * 1000) // 5 minutes
+    }, TOKEN_POLL_INTERVAL_MS)
 
     return () => clearInterval(interval)
   }, [session, checkTokenStatus, refreshToken])
@@ -95,7 +100,7 @@ export function useTokenRefresh() {
         } else {
           // Календарь доступен, но проверяем не истекает ли токен скоро
           const status = await checkTokenStatus()
-          if (status.expiresIn !== null && status.expiresIn < 300) {
+          if (status.expiresIn !== null && status.expiresIn < TOKEN_EXPIRY_CRITICAL_SECONDS) {
             await refreshToken()
           }
         }
