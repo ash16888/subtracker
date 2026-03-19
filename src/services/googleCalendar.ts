@@ -273,7 +273,8 @@ class GoogleCalendarService {
   async forceTokenRefresh(): Promise<boolean> {
     this.tokenExpiresAt = 0
     this.refreshAttempts = 0
-    const newToken = await this.getAccessToken()
+    localStorage.removeItem('subtracker-token-expires')
+    const newToken = await this.refreshAccessToken()
     return !!newToken
   }
   

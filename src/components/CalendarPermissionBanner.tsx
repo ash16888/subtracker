@@ -10,19 +10,26 @@ export function CalendarPermissionBanner() {
   const isGoogleUser = user?.app_metadata?.provider === 'google'
 
   useEffect(() => {
+    if (!isGoogleUser) return
+
+    let cancelled = false
+
     const checkCalendarAccess = async () => {
-      if (!isGoogleUser) return
-      
+      // Даём время useTokenRefresh выполнить автоматическое обновление токена
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      if (cancelled) return
+
       try {
         const accessible = await googleCalendarService.isCalendarAccessible()
-        setHasCalendarAccess(accessible)
+        if (!cancelled) setHasCalendarAccess(accessible)
       } catch (error: unknown) {
         console.error('Error checking calendar access:', error)
-        setHasCalendarAccess(false)
+        if (!cancelled) setHasCalendarAccess(false)
       }
     }
 
     checkCalendarAccess()
+    return () => { cancelled = true }
   }, [isGoogleUser, user, session?.provider_token])
 
   const handleReauthorize = async () => {
