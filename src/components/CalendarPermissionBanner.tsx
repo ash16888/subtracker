@@ -3,7 +3,7 @@ import { useAuth } from '../features/auth/useAuth'
 import { googleCalendarService } from '../services/googleCalendar'
 
 export function CalendarPermissionBanner() {
-  const { user, reauthorizeGoogle } = useAuth()
+  const { user, session, reauthorizeGoogle } = useAuth()
   const [hasCalendarAccess, setHasCalendarAccess] = useState<boolean | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -23,7 +23,7 @@ export function CalendarPermissionBanner() {
     }
 
     checkCalendarAccess()
-  }, [isGoogleUser, user])
+  }, [isGoogleUser, user, session?.provider_token])
 
   const handleReauthorize = async () => {
     setIsLoading(true)

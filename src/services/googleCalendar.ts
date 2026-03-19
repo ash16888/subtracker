@@ -44,11 +44,17 @@ class GoogleCalendarService {
 
   private async refreshAccessToken(): Promise<string | null> {
     try {
-      // Google OAuth токены не могут быть обновлены без повторной авторизации
-      // Пользователь должен заново предоставить права доступа к Google Calendar
-      this.tokenExpiresAt = 0
-      localStorage.removeItem('subtracker-token-expires')
-      return null
+      const { data, error } = await supabase.auth.refreshSession()
+      if (error || !data.session?.provider_token) {
+        this.tokenExpiresAt = 0
+        localStorage.removeItem('subtracker-token-expires')
+        return null
+      }
+      // Токен успешно обновлён — сбрасываем счётчик попыток и сохраняем новое время истечения
+      this.refreshAttempts = 0
+      this.tokenExpiresAt = Date.now() + 50 * 60 * 1000
+      localStorage.setItem('subtracker-token-expires', this.tokenExpiresAt.toString())
+      return data.session.provider_token
     } catch (error: unknown) {
       console.error('Error in refreshAccessToken:', error)
       return null
@@ -113,12 +119,9 @@ class GoogleCalendarService {
         body: body ? JSON.stringify(body) : undefined,
       })
 
-      // Если получили 401, пробуем обновить токен и повторить запрос
+      // Если получили 401, обновляем токен через Supabase и повторяем запрос
       if (response.status === 401 && retry) {
-        // Сбрасываем время истечения чтобы форсировать обновление
-        this.tokenExpiresAt = 0
-        const newToken = await this.getAccessToken()
-        
+        const newToken = await this.refreshAccessToken()
         if (newToken) {
           return this.makeCalendarRequest(method, endpoint, body, false)
         }
