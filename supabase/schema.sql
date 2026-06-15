@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     category TEXT,
     url TEXT,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    google_calendar_event_id TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

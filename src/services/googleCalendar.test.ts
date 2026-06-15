@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { googleCalendarService } from './googleCalendar'
 import { supabase } from '../lib/supabase'
-import { ensureGoogleApisLoaded } from './googleAuthLoader'
 
 // Type for testing private methods
 interface GoogleCalendarServiceForTesting {
   getSession(): Promise<unknown>
-  refreshAccessToken(currentToken?: string): Promise<string | null>
+  refreshAccessToken(): Promise<string | null>
   getAccessToken(): Promise<string | null>
   makeCalendarRequest(method: string, endpoint: string, body?: unknown): Promise<unknown>
+  accessToken: string | null
+  sessionProviderToken: string | null
   tokenExpiresAt: number
   refreshAttempts: number
 }
@@ -18,12 +19,11 @@ vi.mock('../lib/supabase', () => ({
   supabase: {
     auth: {
       getSession: vi.fn()
+    },
+    functions: {
+      invoke: vi.fn()
     }
   }
-}))
-
-vi.mock('./googleAuthLoader', () => ({
-  ensureGoogleApisLoaded: vi.fn()
 }))
 
 // Mock global fetch
@@ -38,17 +38,6 @@ const localStorageMock = {
 }
 Object.defineProperty(window, 'localStorage', { value: localStorageMock })
 
-// Mock Google APIs
-const mockGoogleAPIs = {
-  google: {
-    accounts: {
-      oauth2: {
-        initTokenClient: vi.fn()
-      }
-    }
-  }
-}
-
 describe('GoogleCalendarService', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -62,8 +51,11 @@ describe('GoogleCalendarService', () => {
       configurable: true
     })
     
-    // Reset global window state
-    Object.assign(window, mockGoogleAPIs)
+    const service = googleCalendarService as unknown as GoogleCalendarServiceForTesting
+    service.accessToken = null
+    service.sessionProviderToken = null
+    service.tokenExpiresAt = 0
+    service.refreshAttempts = 0
   })
 
   afterEach(() => {
@@ -98,108 +90,42 @@ describe('GoogleCalendarService', () => {
   })
 
   describe('refreshAccessToken', () => {
-    beforeEach(() => {
-      vi.mocked(ensureGoogleApisLoaded).mockResolvedValue(true)
-    })
-
-    it('should return null if Google APIs failed to load', async () => {
-      vi.mocked(ensureGoogleApisLoaded).mockResolvedValue(false)
-
-      const token = await (googleCalendarService as unknown as GoogleCalendarServiceForTesting).refreshAccessToken()
-
-      expect(token).toBeNull()
-    })
-
-    it('should return null if Google Identity Services not available', async () => {
-      Object.assign(window, { google: undefined })
-
-      const token = await (googleCalendarService as unknown as GoogleCalendarServiceForTesting).refreshAccessToken()
-
-      expect(token).toBeNull()
-    })
-
-    it.skip('should successfully refresh token', async () => {
-      const mockTokenClient = {
-        requestAccessToken: vi.fn()
+    it('should refresh the Google token through the authenticated edge function', async () => {
+      const mockSession = {
+        provider_token: 'old-token',
+        provider_refresh_token: 'google-refresh-token'
       }
-      
-      Object.assign(window, mockGoogleAPIs)
-      vi.mocked(ensureGoogleApisLoaded).mockResolvedValue(true)
-      mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mockReturnValue(mockTokenClient)
-
-      // Mock session
-      const mockSession = { provider_token: 'old-token' }
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
         data: { session: mockSession },
         error: null
       })
+      vi.mocked(supabase.functions.invoke).mockResolvedValue({
+        data: { access_token: 'new-token', expires_in: 3600 },
+        error: null
+      })
 
-      // Execute token refresh and simulate successful callback
-      const refreshPromise = (googleCalendarService as unknown as GoogleCalendarServiceForTesting).refreshAccessToken('')
-      
-      // Simulate callback being called immediately
-      const initTokenClientCall = mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mock.calls[0]?.[0]
-      if (initTokenClientCall?.callback) {
-        initTokenClientCall.callback({
-          access_token: 'new-token',
-          expires_in: 3600
-        })
-      }
-
-      const token = await refreshPromise
+      const token = await (googleCalendarService as unknown as GoogleCalendarServiceForTesting).refreshAccessToken()
 
       expect(token).toBe('new-token')
+      expect(supabase.functions.invoke).toHaveBeenCalledWith('google-token-refresh', {
+        body: { refreshToken: 'google-refresh-token' }
+      })
       expect(localStorageMock.setItem).toHaveBeenCalledWith(
         'subtracker-token-expires',
         expect.stringMatching(/^\d+$/)
       )
     })
 
-    it.skip('should handle token refresh failure', async () => {
-      const mockTokenClient = {
-        requestAccessToken: vi.fn()
-      }
-      
-      Object.assign(window, mockGoogleAPIs)
-      vi.mocked(ensureGoogleApisLoaded).mockResolvedValue(true)
-      mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mockReturnValue(mockTokenClient)
+    it('should return null when no Google refresh token is available', async () => {
+      vi.mocked(supabase.auth.getSession).mockResolvedValue({
+        data: { session: { provider_token: 'old-token' } },
+        error: null
+      })
 
-      const refreshPromise = (googleCalendarService as unknown as GoogleCalendarServiceForTesting).refreshAccessToken('')
-      
-      // Simulate error callback immediately
-      const initTokenClientCall = mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mock.calls[0]?.[0]
-      if (initTokenClientCall?.error_callback) {
-        initTokenClientCall.error_callback()
-      }
-
-      const token = await refreshPromise
+      const token = await (googleCalendarService as unknown as GoogleCalendarServiceForTesting).refreshAccessToken()
 
       expect(token).toBeNull()
-    })
-
-    it.skip('should handle timeout', async () => {
-      const mockTokenClient = {
-        requestAccessToken: vi.fn()
-      }
-      
-      Object.assign(window, mockGoogleAPIs)
-      vi.mocked(ensureGoogleApisLoaded).mockResolvedValue(true)
-      mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mockReturnValue(mockTokenClient)
-
-      // Use fake timers for timeout testing
-      vi.useFakeTimers()
-      
-      try {
-        const refreshPromise = (googleCalendarService as unknown as GoogleCalendarServiceForTesting).refreshAccessToken('')
-        
-        // Fast-forward past timeout (10 seconds)
-        vi.advanceTimersByTime(11000)
-        
-        const token = await refreshPromise
-        expect(token).toBeNull()
-      } finally {
-        vi.useRealTimers()
-      }
+      expect(supabase.functions.invoke).not.toHaveBeenCalled()
     })
   })
 
@@ -242,54 +168,30 @@ describe('GoogleCalendarService', () => {
       expect(token).toBe('valid-token')
     })
 
-    it.skip('should refresh token if expired', async () => {
+    it('should refresh token if expired', async () => {
       const pastTime = Date.now() - 3600000 // 1 hour in past
-      
-      Object.assign(window, mockGoogleAPIs)
+
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
-        data: { session: { provider_token: 'expired-token' } },
+        data: {
+          session: {
+            provider_token: 'expired-token',
+            provider_refresh_token: 'google-refresh-token'
+          }
+        },
         error: null
       })
-      vi.mocked(ensureGoogleApisLoaded).mockResolvedValue(true)
-      
-      // Set token as expired
-      ;(googleCalendarService as unknown as GoogleCalendarServiceForTesting).tokenExpiresAt = pastTime
+      vi.mocked(supabase.functions.invoke).mockResolvedValue({
+        data: { access_token: 'refreshed-token', expires_in: 3600 },
+        error: null
+      })
+      const service = googleCalendarService as unknown as GoogleCalendarServiceForTesting
+      service.accessToken = 'expired-token'
+      service.sessionProviderToken = 'expired-token'
+      service.tokenExpiresAt = pastTime
 
-      const mockTokenClient = {
-        requestAccessToken: vi.fn()
-      }
-      mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mockReturnValue(mockTokenClient)
-
-      const tokenPromise = (googleCalendarService as unknown as GoogleCalendarServiceForTesting).getAccessToken()
-      
-      // Simulate successful refresh immediately
-      const initTokenClientCall = mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mock.calls[0]?.[0]
-      if (initTokenClientCall?.callback) {
-        initTokenClientCall.callback({
-          access_token: 'refreshed-token',
-          expires_in: 3600
-        })
-      }
-
-      const token = await tokenPromise
+      const token = await service.getAccessToken()
 
       expect(token).toBe('refreshed-token')
-    })
-
-    it.skip('should restore token expiry from localStorage', async () => {
-      const savedTime = (Date.now() + 3600000).toString()
-      localStorageMock.getItem.mockReturnValue(savedTime)
-      
-      vi.mocked(ensureGoogleApisLoaded).mockResolvedValue(true)
-      vi.mocked(supabase.auth.getSession).mockResolvedValue({
-        data: { session: { provider_token: 'token' } },
-        error: null
-      })
-
-      const token = await (googleCalendarService as unknown as GoogleCalendarServiceForTesting).getAccessToken()
-
-      expect(localStorageMock.getItem).toHaveBeenCalledWith('subtracker-token-expires')
-      expect(token).toBe('token')
     })
   })
 
@@ -339,6 +241,19 @@ describe('GoogleCalendarService', () => {
     })
 
     it('should handle 401 error and retry with new token', async () => {
+      vi.mocked(supabase.auth.getSession).mockResolvedValue({
+        data: {
+          session: {
+            provider_token: 'expired-token',
+            provider_refresh_token: 'google-refresh-token'
+          }
+        },
+        error: null
+      })
+      vi.mocked(supabase.functions.invoke).mockResolvedValue({
+        data: { access_token: 'new-token', expires_in: 3600 },
+        error: null
+      })
       mockFetch
         .mockResolvedValueOnce({
           ok: false,
@@ -350,27 +265,15 @@ describe('GoogleCalendarService', () => {
           json: () => Promise.resolve({ id: 'success' })
         })
 
-      Object.assign(window, mockGoogleAPIs)
-      vi.mocked(ensureGoogleApisLoaded).mockResolvedValue(true)
-      const mockTokenClient = {
-        requestAccessToken: vi.fn()
-      }
-      mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mockReturnValue(mockTokenClient)
-
-      const requestPromise = (googleCalendarService as unknown as GoogleCalendarServiceForTesting).makeCalendarRequest('GET', 'calendars/primary')
-      
-      // Simulate token refresh immediately
-      const initTokenClientCall = mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mock.calls[0]?.[0]
-      if (initTokenClientCall?.callback) {
-        initTokenClientCall.callback({
-          access_token: 'new-token',
-          expires_in: 3600
-        })
-      }
-
-      const result = await requestPromise
+      const result = await (googleCalendarService as unknown as GoogleCalendarServiceForTesting).makeCalendarRequest('GET', 'calendars/primary')
 
       expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(mockFetch).toHaveBeenLastCalledWith(
+        'https://www.googleapis.com/calendar/v3/calendars/primary',
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: 'Bearer new-token' })
+        })
+      )
       expect(result).toEqual({ id: 'success' })
     })
 
@@ -394,25 +297,7 @@ describe('GoogleCalendarService', () => {
           json: () => Promise.resolve({ id: 'success' })
         })
 
-      Object.assign(window, mockGoogleAPIs)
-      vi.mocked(ensureGoogleApisLoaded).mockResolvedValue(true)
-      const mockTokenClient = {
-        requestAccessToken: vi.fn()
-      }
-      mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mockReturnValue(mockTokenClient)
-
-      const requestPromise = (googleCalendarService as unknown as GoogleCalendarServiceForTesting).makeCalendarRequest('GET', 'calendars/primary')
-      
-      // Simulate token refresh immediately
-      const initTokenClientCall = mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mock.calls[0]?.[0]
-      if (initTokenClientCall?.callback) {
-        initTokenClientCall.callback({
-          access_token: 'new-token',
-          expires_in: 3600
-        })
-      }
-
-      const result = await requestPromise
+      const result = await (googleCalendarService as unknown as GoogleCalendarServiceForTesting).makeCalendarRequest('GET', 'calendars/primary')
 
       expect(result).toEqual({ id: 'success' })
     })
@@ -642,33 +527,23 @@ describe('GoogleCalendarService', () => {
   describe('forceTokenRefresh', () => {
     it('should force refresh and return success', async () => {
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
-        data: { session: { provider_token: 'old-token' } },
+        data: {
+          session: {
+            provider_token: 'old-token',
+            provider_refresh_token: 'google-refresh-token'
+          }
+        },
         error: null
       })
-      vi.mocked(ensureGoogleApisLoaded).mockResolvedValue(true)
+      vi.mocked(supabase.functions.invoke).mockResolvedValue({
+        data: { access_token: 'new-token', expires_in: 3600 },
+        error: null
+      })
 
-      const mockTokenClient = {
-        requestAccessToken: vi.fn()
-      }
-      mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mockReturnValue(mockTokenClient)
-
-      const refreshPromise = googleCalendarService.forceTokenRefresh()
-      
-      // Simulate successful refresh
-      setTimeout(() => {
-        const initTokenClientCall = mockGoogleAPIs.google.accounts.oauth2.initTokenClient.mock.calls[0]?.[0]
-        if (initTokenClientCall?.callback) {
-          initTokenClientCall.callback({
-            access_token: 'new-token',
-            expires_in: 3600
-          })
-        }
-      }, 0)
-
-      const result = await refreshPromise
+      const result = await googleCalendarService.forceTokenRefresh()
 
       expect(result).toBe(true)
-      expect((googleCalendarService as unknown as GoogleCalendarServiceForTesting).tokenExpiresAt).toBe(0) // Should reset
+      expect((googleCalendarService as unknown as GoogleCalendarServiceForTesting).tokenExpiresAt).toBeGreaterThan(Date.now())
       expect((googleCalendarService as unknown as GoogleCalendarServiceForTesting).refreshAttempts).toBe(0) // Should reset
     })
   })
@@ -712,7 +587,10 @@ describe('GoogleCalendarService', () => {
         data: { session: { provider_token: 'expired-token' } },
         error: null
       })
-      ;(googleCalendarService as unknown as GoogleCalendarServiceForTesting).tokenExpiresAt = pastTime
+      const service = googleCalendarService as unknown as GoogleCalendarServiceForTesting
+      service.accessToken = 'expired-token'
+      service.sessionProviderToken = 'expired-token'
+      service.tokenExpiresAt = pastTime
 
       const status = await googleCalendarService.getTokenStatus()
 

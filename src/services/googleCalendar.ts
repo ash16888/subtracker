@@ -30,56 +30,93 @@ interface CalendarEvent {
 }
 
 class GoogleCalendarService {
-  // @ts-expect-error - используется для кэширования сессии
-  private session: Session | null = null
+  private accessToken: string | null = null
+  private sessionProviderToken: string | null = null
   private tokenExpiresAt: number = 0
   private refreshAttempts: number = 0
   private maxRefreshAttempts: number = 3
+  private refreshPromise: Promise<string | null> | null = null
 
   private async getSession(): Promise<Session | null> {
     const { data: { session } } = await supabase.auth.getSession()
-    this.session = session
     return session
   }
 
   private async refreshAccessToken(): Promise<string | null> {
-    try {
-      const { data, error } = await supabase.auth.refreshSession()
-      if (error || !data.session?.provider_token) {
+    if (this.refreshPromise) {
+      return this.refreshPromise
+    }
+
+    this.refreshPromise = (async () => {
+      try {
+        const session = await this.getSession()
+        const refreshToken = session?.provider_refresh_token
+
+        if (!refreshToken) {
+          this.accessToken = null
+          this.tokenExpiresAt = 0
+          localStorage.removeItem('subtracker-token-expires')
+          return null
+        }
+
+        const { data, error } = await supabase.functions.invoke<{
+          access_token: string
+          expires_in?: number
+        }>('google-token-refresh', {
+          body: { refreshToken },
+        })
+
+        if (error || !data?.access_token) {
+          this.accessToken = null
+          this.tokenExpiresAt = 0
+          localStorage.removeItem('subtracker-token-expires')
+          return null
+        }
+
+        this.accessToken = data.access_token
+        this.refreshAttempts = 0
+        this.tokenExpiresAt = Date.now() + (data.expires_in ?? 3600) * 1000
+        localStorage.setItem('subtracker-token-expires', this.tokenExpiresAt.toString())
+        return data.access_token
+      } catch (error: unknown) {
+        console.error('Error in refreshAccessToken:', error)
+        this.accessToken = null
         this.tokenExpiresAt = 0
         localStorage.removeItem('subtracker-token-expires')
         return null
+      } finally {
+        this.refreshPromise = null
       }
-      // Токен успешно обновлён — сбрасываем счётчик попыток и сохраняем новое время истечения
-      this.refreshAttempts = 0
-      this.tokenExpiresAt = Date.now() + 50 * 60 * 1000
-      localStorage.setItem('subtracker-token-expires', this.tokenExpiresAt.toString())
-      return data.session.provider_token
-    } catch (error: unknown) {
-      console.error('Error in refreshAccessToken:', error)
-      return null
-    }
+    })()
+
+    return this.refreshPromise
   }
 
   private async getAccessToken(): Promise<string | null> {
     const session = await this.getSession()
-    
-    if (!session?.provider_token) {
+
+    if (!session) {
+      this.accessToken = null
+      this.sessionProviderToken = null
+      this.tokenExpiresAt = 0
       return null
     }
-    
-    // Восстанавливаем время истечения из localStorage если нет в памяти
-    if (!this.tokenExpiresAt) {
-      const savedExpiry = localStorage.getItem('subtracker-token-expires')
-      if (savedExpiry) {
-        this.tokenExpiresAt = parseInt(savedExpiry, 10)
-      }
+
+    if (session.provider_token && session.provider_token !== this.sessionProviderToken) {
+      this.sessionProviderToken = session.provider_token
+      this.accessToken = session.provider_token
+      this.tokenExpiresAt = Date.now() + 50 * 60 * 1000
+      localStorage.setItem('subtracker-token-expires', this.tokenExpiresAt.toString())
     }
-    
+
+    if (!this.accessToken) {
+      return session.provider_refresh_token ? this.refreshAccessToken() : null
+    }
+
     // Проверяем, не истек ли токен (обновляем за TOKEN_REFRESH_BUFFER_MS до истечения)
     if (this.tokenExpiresAt && Date.now() > this.tokenExpiresAt - TOKEN_REFRESH_BUFFER_MS) {
       if (this.refreshAttempts >= this.maxRefreshAttempts) {
-        return session.provider_token
+        return null
       }
 
       this.refreshAttempts++
@@ -87,15 +124,12 @@ class GoogleCalendarService {
 
       if (newToken) {
         return newToken
-      } else {
-        if (this.refreshAttempts < this.maxRefreshAttempts) {
-          const delay = Math.pow(2, this.refreshAttempts - 1) * 1000 // 1s, 2s, 4s
-          await new Promise(resolve => setTimeout(resolve, delay))
-        }
       }
+
+      return null
     }
-    
-    return session.provider_token
+
+    return this.accessToken
   }
 
   private async makeCalendarRequest(
@@ -271,6 +305,7 @@ class GoogleCalendarService {
 
   // Метод для принудительного обновления токена
   async forceTokenRefresh(): Promise<boolean> {
+    this.accessToken = null
     this.tokenExpiresAt = 0
     this.refreshAttempts = 0
     localStorage.removeItem('subtracker-token-expires')
@@ -285,20 +320,27 @@ class GoogleCalendarService {
     expiresIn: number | null
   }> {
     const session = await this.getSession()
-    const hasToken = !!session?.provider_token
-    
+
+    if (!session) {
+      this.accessToken = null
+      this.sessionProviderToken = null
+      this.tokenExpiresAt = 0
+      return { hasToken: false, isExpired: true, expiresIn: null }
+    }
+
+    if (session.provider_token && session.provider_token !== this.sessionProviderToken) {
+      this.sessionProviderToken = session.provider_token
+      this.accessToken = session.provider_token
+      this.tokenExpiresAt = Date.now() + 50 * 60 * 1000
+      localStorage.setItem('subtracker-token-expires', this.tokenExpiresAt.toString())
+    }
+
+    const hasToken = !!this.accessToken
+
     if (!hasToken) {
       return { hasToken: false, isExpired: true, expiresIn: null }
     }
-    
-    // Восстанавливаем время истечения из localStorage если нет в памяти
-    if (!this.tokenExpiresAt) {
-      const savedExpiry = localStorage.getItem('subtracker-token-expires')
-      if (savedExpiry) {
-        this.tokenExpiresAt = parseInt(savedExpiry, 10)
-      }
-    }
-    
+
     // Если время истечения неизвестно, считаем токен активным
     if (!this.tokenExpiresAt) {
       // Устанавливаем время истечения на 50 минут вперед

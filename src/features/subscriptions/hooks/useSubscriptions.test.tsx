@@ -153,6 +153,42 @@ describe('useSubscriptions', () => {
       expect(result.current.data).toEqual([mockSubscription])
     })
 
+    it('projects a deeply overdue payment into the future without writing during the query', async () => {
+      vi.mocked(useAuth).mockReturnValue({
+        user: mockUser,
+        loading: false,
+        signInWithGoogle: vi.fn(),
+        reauthorizeGoogle: vi.fn(),
+        signOut: vi.fn(),
+        session: null
+      } as MockAuthReturn)
+
+      const overdueSubscription = {
+        ...mockSubscription,
+        next_payment_date: '2020-01-01T00:00:00Z'
+      }
+      const mockSupabaseChain = {
+        select: vi.fn().mockReturnThis(),
+        order: vi.fn().mockResolvedValue({
+          data: [overdueSubscription],
+          error: null
+        })
+      }
+
+      vi.mocked(supabase.from).mockReturnValue(mockSupabaseChain as unknown as MockSupabaseChain)
+
+      const wrapper = createWrapper()
+      const { result } = renderHook(() => useSubscriptions(), { wrapper })
+
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true)
+      })
+
+      const projectedDate = new Date(result.current.data?.[0]?.next_payment_date ?? 0)
+      expect(projectedDate.getTime()).toBeGreaterThanOrEqual(new Date().setHours(0, 0, 0, 0))
+      expect(supabase.from).toHaveBeenCalledTimes(1)
+    })
+
     it('should return empty array when no user', async () => {
       vi.mocked(useAuth).mockReturnValue({ 
         user: null, 

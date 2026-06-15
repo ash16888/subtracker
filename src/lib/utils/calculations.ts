@@ -1,4 +1,4 @@
-import { addMonths, addYears, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns'
+import { addMonths, addYears, startOfDay, startOfMonth, endOfMonth, isBefore, isWithinInterval } from 'date-fns'
 import type { Database } from '../../types/database.types'
 
 type Subscription = Database['public']['Tables']['subscriptions']['Row']
@@ -34,6 +34,21 @@ export function calculateNextPaymentDate(
   } else {
     return addYears(currentDate, 1)
   }
+}
+
+export function calculateUpcomingPaymentDate(
+  currentDate: Date,
+  billingPeriod: 'monthly' | 'yearly',
+  referenceDate = new Date()
+): Date {
+  let nextPaymentDate = currentDate
+  const referenceDay = startOfDay(referenceDate)
+
+  while (isBefore(startOfDay(nextPaymentDate), referenceDay)) {
+    nextPaymentDate = calculateNextPaymentDate(nextPaymentDate, billingPeriod)
+  }
+
+  return nextPaymentDate
 }
 
 export function formatCurrency(amount: number, currency: string): string {

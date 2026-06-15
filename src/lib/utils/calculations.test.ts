@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
 import {
   calculateMonthlyTotal,
   calculateNextPaymentDate,
+  calculateUpcomingPaymentDate,
   formatCurrency,
 } from './calculations'
 import type { Subscription } from '../../types/subscription'
@@ -113,6 +114,18 @@ describe('calculateNextPaymentDate', () => {
     const current = new Date('2020-02-29T12:00:00Z')
     const expected = new Date('2021-02-28T12:00:00Z') // date-fns behaviour
     expect(calculateNextPaymentDate(current, 'yearly')).toEqual(expected)
+  })
+})
+
+describe('calculateUpcomingPaymentDate', () => {
+  it('advances through every missed billing period', () => {
+    const result = calculateUpcomingPaymentDate(
+      new Date('2020-01-01T00:00:00Z'),
+      'monthly',
+      new Date('2026-06-15T10:00:00Z')
+    )
+
+    expect(result).toEqual(new Date('2026-07-01T00:00:00Z'))
   })
 })
 

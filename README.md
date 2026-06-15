@@ -135,4 +135,5 @@ google_calendar_event_id
 - Row Level Security (RLS) в Supabase
 - Пользователи видят только свои подписки
 - OAuth 2.0 для Google Calendar
+- Обновление Google access token через защищённую Supabase Edge Function
 - Переменные окружения для API ключей

@@ -45,6 +45,22 @@
 5. Redirect URL уже будет заполнен автоматически (скопируйте его для шага 1.6)
 6. Сохраните настройки
 
+### Настройка автоматического обновления Google-токена
+
+Google `provider_refresh_token` обменивается на новый access token только на сервере, чтобы Client Secret не попадал в браузер.
+
+1. Добавьте OAuth credentials в секреты Supabase Edge Functions:
+   ```bash
+   supabase secrets set \
+     GOOGLE_OAUTH_CLIENT_ID=ваш-google-client-id \
+     GOOGLE_OAUTH_CLIENT_SECRET=ваш-google-client-secret
+   ```
+2. Задеплойте функцию обновления токена:
+   ```bash
+   supabase functions deploy google-token-refresh
+   ```
+3. Не добавляйте `GOOGLE_OAUTH_CLIENT_SECRET` в `.env` фронтенда или переменные Vercel.
+
 ## 4. Проверка работы
 
 1. Запустите приложение локально: `npm run dev`
@@ -93,8 +109,9 @@
 VITE_SUPABASE_URL=https://ВАШ-ПРОЕКТ.supabase.co
 VITE_SUPABASE_ANON_KEY=ваш-anon-ключ
 VITE_GOOGLE_CLIENT_ID=ваш-google-client-id
-VITE_GOOGLE_API_KEY=ваш-google-api-key
 ```
+
+`GOOGLE_OAUTH_CLIENT_ID` и `GOOGLE_OAUTH_CLIENT_SECRET` хранятся отдельно в Supabase Secrets и используются функцией `google-token-refresh`.
 
 ## Настройка Google Calendar интеграции
 

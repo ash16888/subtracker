@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../../../lib/supabase'
 import { useAuth } from '../../auth/useAuth'
-import { calculateNextPaymentDate } from '../../../lib/utils/calculations'
-import { isBefore, startOfDay } from 'date-fns'
+import { calculateUpcomingPaymentDate } from '../../../lib/utils/calculations'
 import type { Database } from '../../../types/database.types'
 
 type Subscription = Database['public']['Tables']['subscriptions']['Row']
@@ -24,42 +23,23 @@ export function useSubscriptions() {
 
       if (error) throw error
       
-      const subscriptions = data as Subscription[]
-      const now = startOfDay(new Date())
-      const updatedSubscriptions: Subscription[] = []
-      
-      // Check each subscription for past payment dates and auto-renew
-      for (const subscription of subscriptions) {
-        const paymentDate = startOfDay(new Date(subscription.next_payment_date))
-        
-        if (isBefore(paymentDate, now)) {
-          // Payment date is in the past, calculate new date
-          const newPaymentDate = calculateNextPaymentDate(paymentDate, subscription.billing_period)
-          
-          // Update the subscription in the database
-          const { data: updatedData, error: updateError } = await supabase
-            .from('subscriptions')
-            .update({ 
-              next_payment_date: newPaymentDate.toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', subscription.id)
-            .select()
-            .single()
-          
-          if (updateError) {
-            console.error('Failed to update subscription:', updateError)
-            updatedSubscriptions.push(subscription) // Keep original if update fails
-          } else {
-            updatedSubscriptions.push(updatedData as Subscription)
-          }
-        } else {
-          updatedSubscriptions.push(subscription)
+      const subscriptions = (data as Subscription[]).map(subscription => {
+        const upcomingPaymentDate = calculateUpcomingPaymentDate(
+          new Date(subscription.next_payment_date),
+          subscription.billing_period
+        )
+
+        if (upcomingPaymentDate.getTime() === new Date(subscription.next_payment_date).getTime()) {
+          return subscription
         }
-      }
-      
-      // Re-sort by next_payment_date after updates
-      return updatedSubscriptions.sort((a, b) => 
+
+        return {
+          ...subscription,
+          next_payment_date: upcomingPaymentDate.toISOString(),
+        }
+      })
+
+      return subscriptions.sort((a, b) =>
         new Date(a.next_payment_date).getTime() - new Date(b.next_payment_date).getTime()
       )
     },
