@@ -10,6 +10,7 @@ interface GoogleCalendarServiceForTesting {
   makeCalendarRequest(method: string, endpoint: string, body?: unknown): Promise<unknown>
   accessToken: string | null
   sessionProviderToken: string | null
+  providerRefreshToken: string | null
   tokenExpiresAt: number
   refreshAttempts: number
 }
@@ -54,6 +55,7 @@ describe('GoogleCalendarService', () => {
     const service = googleCalendarService as unknown as GoogleCalendarServiceForTesting
     service.accessToken = null
     service.sessionProviderToken = null
+    service.providerRefreshToken = null
     service.tokenExpiresAt = 0
     service.refreshAttempts = 0
   })
@@ -114,6 +116,39 @@ describe('GoogleCalendarService', () => {
         'subtracker-token-expires',
         expect.stringMatching(/^\d+$/)
       )
+    })
+
+    it('should reuse the stored Google refresh token after Supabase rotates its session', async () => {
+      vi.mocked(supabase.auth.getSession)
+        .mockResolvedValueOnce({
+          data: {
+            session: {
+              provider_token: 'old-token',
+              provider_refresh_token: 'google-refresh-token'
+            }
+          },
+          error: null
+        })
+        .mockResolvedValueOnce({
+          data: { session: { access_token: 'new-supabase-token' } },
+          error: null
+        })
+      vi.mocked(supabase.functions.invoke).mockResolvedValue({
+        data: { access_token: 'new-google-token', expires_in: 3600 },
+        error: null
+      })
+      const service = googleCalendarService as unknown as GoogleCalendarServiceForTesting
+
+      await service.getAccessToken()
+      service.accessToken = null
+      service.tokenExpiresAt = 0
+
+      const token = await service.refreshAccessToken()
+
+      expect(token).toBe('new-google-token')
+      expect(supabase.functions.invoke).toHaveBeenCalledWith('google-token-refresh', {
+        body: { refreshToken: 'google-refresh-token' }
+      })
     })
 
     it('should return null when no Google refresh token is available', async () => {

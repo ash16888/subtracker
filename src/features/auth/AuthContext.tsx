@@ -1,6 +1,7 @@
 import { createContext, useEffect, useState } from 'react'
 import type { User, Session } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
+import { GOOGLE_REFRESH_TOKEN_STORAGE_KEY } from '../../lib/constants'
 
 interface AuthContextType {
   user: User | null
@@ -12,6 +13,12 @@ interface AuthContextType {
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+const persistGoogleRefreshToken = (session: Session | null): void => {
+  if (session?.provider_refresh_token) {
+    localStorage.setItem(GOOGLE_REFRESH_TOKEN_STORAGE_KEY, session.provider_refresh_token)
+  }
+}
 
 type AuthProviderProps = {
   children: React.ReactNode
@@ -45,6 +52,7 @@ export function AuthProvider({
           if (error) {
             await supabase.auth.signOut()
           } else if (storedSession) {
+            persistGoogleRefreshToken(storedSession)
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
               setSession(storedSession)
@@ -67,12 +75,14 @@ export function AuthProvider({
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (mounted) {
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          persistGoogleRefreshToken(session)
           setSession(session)
           setUser(session?.user ?? null)
         } else if (event === 'SIGNED_OUT') {
           setSession(null)
           setUser(null)
           localStorage.removeItem('subtracker-token-expires')
+          localStorage.removeItem(GOOGLE_REFRESH_TOKEN_STORAGE_KEY)
         } else if (event === 'USER_UPDATED') {
           setSession(session)
           setUser(session?.user ?? null)

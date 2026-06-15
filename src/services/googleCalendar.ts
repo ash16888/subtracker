@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase'
 import type { Session } from '@supabase/supabase-js'
 import {
   TOKEN_REFRESH_BUFFER_MS,
+  GOOGLE_REFRESH_TOKEN_STORAGE_KEY,
   NETWORK_RETRY_DELAY_MS,
   REMINDER_DAYS_BEFORE_PAYMENT,
   REMINDER_HOUR,
@@ -32,6 +33,7 @@ interface CalendarEvent {
 class GoogleCalendarService {
   private accessToken: string | null = null
   private sessionProviderToken: string | null = null
+  private providerRefreshToken: string | null = null
   private tokenExpiresAt: number = 0
   private refreshAttempts: number = 0
   private maxRefreshAttempts: number = 3
@@ -39,6 +41,19 @@ class GoogleCalendarService {
 
   private async getSession(): Promise<Session | null> {
     const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+      this.providerRefreshToken = null
+      return null
+    }
+
+    if (session.provider_refresh_token) {
+      this.providerRefreshToken = session.provider_refresh_token
+      localStorage.setItem(GOOGLE_REFRESH_TOKEN_STORAGE_KEY, session.provider_refresh_token)
+    } else if (!this.providerRefreshToken) {
+      this.providerRefreshToken = localStorage.getItem(GOOGLE_REFRESH_TOKEN_STORAGE_KEY)
+    }
+
     return session
   }
 
@@ -50,7 +65,7 @@ class GoogleCalendarService {
     this.refreshPromise = (async () => {
       try {
         const session = await this.getSession()
-        const refreshToken = session?.provider_refresh_token
+        const refreshToken = session?.provider_refresh_token ?? this.providerRefreshToken
 
         if (!refreshToken) {
           this.accessToken = null
@@ -110,7 +125,7 @@ class GoogleCalendarService {
     }
 
     if (!this.accessToken) {
-      return session.provider_refresh_token ? this.refreshAccessToken() : null
+      return this.providerRefreshToken ? this.refreshAccessToken() : null
     }
 
     // Проверяем, не истек ли токен (обновляем за TOKEN_REFRESH_BUFFER_MS до истечения)

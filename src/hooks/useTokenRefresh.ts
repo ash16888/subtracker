@@ -44,7 +44,7 @@ export function useTokenRefresh() {
 
   // Проверяем статус токена при монтировании и изменении сессии
   useEffect(() => {
-    if (session?.provider_token) {
+    if (session) {
       const initializeToken = async () => {
         const status = await checkTokenStatus()
         
@@ -66,7 +66,7 @@ export function useTokenRefresh() {
 
   // Устанавливаем интервал для проактивного обновления токенов
   useEffect(() => {
-    if (!session?.provider_token) return
+    if (!session) return
 
     // Проверяем каждые 5 минут
     const interval = setInterval(async () => {
@@ -84,7 +84,7 @@ export function useTokenRefresh() {
   // Проверяем токен при возвращении на вкладку
   useEffect(() => {
     const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible' && session?.provider_token) {
+      if (document.visibilityState === 'visible' && session) {
         // Сначала проверяем доступность календаря
         const isAccessible = await googleCalendarService.isCalendarAccessible()
         if (!isAccessible) {
@@ -114,7 +114,7 @@ export function useTokenRefresh() {
   // Обрабатываем восстановление сетевого соединения
   useEffect(() => {
     const handleOnline = async () => {
-      if (session?.provider_token) {
+      if (session) {
         const isAccessible = await googleCalendarService.isCalendarAccessible()
         if (!isAccessible) {
           await refreshToken()
