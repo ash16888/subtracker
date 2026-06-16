@@ -2,7 +2,7 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { RefreshCw } from 'lucide-react'
 import type { Database } from '../../../types/database.types'
-import { formatCurrency } from '../../../lib/utils/calculations'
+import { formatCurrency, isSubscriptionBillable } from '../../../lib/utils/calculations'
 import { useDeleteSubscriptionWithCalendar, useRetrySubscriptionCalendarSync } from '../../calendar/hooks/useCalendarSubscriptions'
 import { useState } from 'react'
 import { SubscriptionForm } from './SubscriptionForm'
@@ -52,7 +52,7 @@ const CALENDAR_SYNC_STATUS_META: Record<CalendarSyncStatus, { label: string; cla
     className: 'bg-red-50 text-red-700 border-red-200',
   },
   not_connected: {
-    label: 'Календарь: не подключен',
+    label: 'Календарь: не настроен',
     className: 'bg-gray-50 text-gray-600 border-gray-200',
   },
   disabled: {
@@ -67,6 +67,21 @@ const getSubscriptionStatusMeta = (status: Subscription['status'] | undefined) =
 
 const getCalendarSyncStatusMeta = (status: Subscription['calendar_sync_status'] | undefined) => {
   return CALENDAR_SYNC_STATUS_META[status ?? 'not_connected']
+}
+
+const getEffectiveCalendarSyncStatus = (subscription: Subscription): CalendarSyncStatus => {
+  if (subscription.google_calendar_event_id && subscription.calendar_sync_status === 'not_connected') {
+    return 'synced'
+  }
+
+  return subscription.calendar_sync_status ?? 'not_connected'
+}
+
+const canRunCalendarSync = (subscription: Subscription) => {
+  const effectiveStatus = getEffectiveCalendarSyncStatus(subscription)
+
+  return isSubscriptionBillable(subscription) &&
+    (effectiveStatus === 'not_connected' || effectiveStatus === 'error')
 }
 
 export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
@@ -110,7 +125,12 @@ export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
       <ul className="divide-y divide-gray-200">
         {subscriptions.map((subscription) => {
           const subscriptionStatus = getSubscriptionStatusMeta(subscription.status)
-          const calendarSyncStatus = getCalendarSyncStatusMeta(subscription.calendar_sync_status)
+          const effectiveCalendarSyncStatus = getEffectiveCalendarSyncStatus(subscription)
+          const calendarSyncStatus = getCalendarSyncStatusMeta(effectiveCalendarSyncStatus)
+          const showCalendarAction = canRunCalendarSync(subscription)
+          const calendarActionLabel = effectiveCalendarSyncStatus === 'error'
+            ? 'Повторить'
+            : 'Синхронизировать'
 
           return (
             <li key={subscription.id}>
@@ -134,16 +154,16 @@ export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
                     <span className={`px-2 inline-flex text-xs leading-5 font-medium rounded-full border ${calendarSyncStatus.className}`}>
                       {calendarSyncStatus.label}
                     </span>
-                    {subscription.calendar_sync_status === 'error' && (
+                    {showCalendarAction && (
                       <button
                         type="button"
                         onClick={() => handleRetrySync(subscription.id)}
                         disabled={retryCalendarSync.isPending}
-                        className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-white px-2 text-xs font-medium leading-5 text-red-700 hover:bg-red-50 disabled:opacity-50"
-                        title="Повторить синхронизацию с Google Calendar"
+                        className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-white px-2 text-xs font-medium leading-5 text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                        title={`${calendarActionLabel} с Google Calendar`}
                       >
                         <RefreshCw className="h-3 w-3" />
-                        Повторить
+                        {calendarActionLabel}
                       </button>
                     )}
                   </div>
@@ -169,7 +189,7 @@ export function SubscriptionList({ subscriptions }: SubscriptionListProps) {
                       </p>
                     </div>
                   </div>
-                  {subscription.calendar_sync_status === 'error' && subscription.calendar_sync_error && (
+                  {effectiveCalendarSyncStatus === 'error' && subscription.calendar_sync_error && (
                     <p className="mt-2 max-w-3xl text-xs text-red-600">
                       Ошибка календаря: {subscription.calendar_sync_error}
                     </p>

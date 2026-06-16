@@ -31,6 +31,7 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
       billing_period: subscription.billing_period,
       next_payment_date: format(new Date(subscription.next_payment_date), 'yyyy-MM-dd'),
       status: subscription.status,
+      sync_google_calendar: subscription.calendar_sync_status !== 'disabled',
       category: subscription.category || '',
       url: subscription.url || '',
     } : {
@@ -38,6 +39,7 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
       billing_period: 'monthly',
       next_payment_date: format(new Date(), 'yyyy-MM-dd'),
       status: 'active',
+      sync_google_calendar: true,
     },
   })
 
@@ -52,6 +54,7 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
           billing_period: data.billing_period,
           next_payment_date: new Date(data.next_payment_date).toISOString(),
           status: data.status,
+          calendar_sync_status: data.sync_google_calendar ? 'pending' : 'disabled',
           category: data.category || null,
           url: data.url || null,
         })
@@ -63,6 +66,7 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
           billing_period: data.billing_period,
           next_payment_date: new Date(data.next_payment_date).toISOString(),
           status: data.status,
+          calendar_sync_status: data.sync_google_calendar ? 'pending' : 'disabled',
           category: data.category || null,
           url: data.url || null,
         })
@@ -184,6 +188,17 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
               </option>
             ))}
           </select>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              {...register('sync_google_calendar')}
+              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span>Напоминание в Google Calendar</span>
+          </label>
         </div>
 
         <div>

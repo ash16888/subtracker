@@ -141,6 +141,7 @@ describe('Subscription validation behavior', () => {
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
         status: 'active' as const,
+        sync_google_calendar: true,
         category: 'Развлечения',
         url: 'https://netflix.com',
       }
@@ -157,6 +158,7 @@ describe('Subscription validation behavior', () => {
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
         status: 'active' as const,
+        sync_google_calendar: true,
       }
 
       const result = subscriptionFormSchema.safeParse(formData)
@@ -179,6 +181,7 @@ describe('Subscription validation behavior', () => {
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
         status: 'active' as const,
+        sync_google_calendar: true,
       }
 
       const result = subscriptionFormSchema.safeParse(formData)
@@ -193,6 +196,7 @@ describe('Subscription validation behavior', () => {
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
         status: 'active' as const,
+        sync_google_calendar: true,
         url: '',
       }
 
@@ -208,6 +212,7 @@ describe('Subscription validation behavior', () => {
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
         status: 'active' as const,
+        sync_google_calendar: true,
         url: 'not-a-url',
       }
 
@@ -231,6 +236,7 @@ describe('Subscription validation behavior', () => {
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
         status: 'active' as const,
+        sync_google_calendar: true,
       }
 
       const result = subscriptionFormSchema.safeParse(formData)
@@ -253,6 +259,7 @@ describe('Subscription validation behavior', () => {
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
         status: 'active' as const,
+        sync_google_calendar: true,
       }
 
       const result = subscriptionFormSchema.safeParse(formData)
@@ -275,6 +282,7 @@ describe('Subscription validation behavior', () => {
         billing_period: 'monthly' as const,
         next_payment_date: '',
         status: 'active' as const,
+        sync_google_calendar: true,
       }
 
       const result = subscriptionFormSchema.safeParse(formData)

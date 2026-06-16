@@ -18,12 +18,17 @@ const hasBillableStatus = (status?: Subscription['status']): boolean => {
   return status === undefined || status === 'active' || status === 'trial'
 }
 
+const hasCalendarSyncEnabled = (status?: CalendarSyncStatus): boolean => {
+  return status !== 'disabled'
+}
+
 const hasCalendarChanges = (updates: SubscriptionUpdate): boolean => {
   return updates.name !== undefined ||
     updates.amount !== undefined ||
     updates.currency !== undefined ||
     updates.next_payment_date !== undefined ||
-    updates.status !== undefined
+    updates.status !== undefined ||
+    updates.calendar_sync_status !== undefined
 }
 
 const getReminderValues = (
@@ -122,7 +127,7 @@ export async function createSubscriptionWithCalendar(
   let calendarEventId: string | null = null
   let syncFields: SubscriptionUpdate = createSyncUpdate('not_connected', null, null)
 
-  if (!hasBillableStatus(subscription.status)) {
+  if (!hasBillableStatus(subscription.status) || !hasCalendarSyncEnabled(subscription.calendar_sync_status)) {
     syncFields = createSyncUpdate('disabled', null, null)
   } else if (isGoogleUser(user)) {
     syncFields = createSyncUpdate('pending', null, null)
@@ -192,7 +197,9 @@ export async function updateSubscriptionWithCalendar(
     return updatedSubscription
   }
 
-  const shouldSyncReminder = isSubscriptionBillable(updatedSubscription)
+  const shouldSyncReminder =
+    isSubscriptionBillable(updatedSubscription) &&
+    hasCalendarSyncEnabled(updatedSubscription.calendar_sync_status)
   const existingEventId = currentSubscription.google_calendar_event_id
 
   if (!shouldSyncReminder) {
@@ -362,7 +369,9 @@ export async function retrySubscriptionCalendarSync(
   }
 
   const existingEventId = subscription.google_calendar_event_id
-  const shouldSyncReminder = isSubscriptionBillable(subscription)
+  const shouldSyncReminder =
+    isSubscriptionBillable(subscription) &&
+    hasCalendarSyncEnabled(subscription.calendar_sync_status)
 
   if (!shouldSyncReminder) {
     if (!existingEventId) {

@@ -37,6 +37,7 @@ export const subscriptionFormSchema = z.object({
   billing_period: z.enum(['monthly', 'yearly']),
   next_payment_date: z.string().min(1, 'Дата обязательна'),
   status: z.enum(['active', 'trial', 'paused', 'canceled', 'archived']),
+  sync_google_calendar: z.boolean(),
   category: z.string().optional(),
   url: z.string().url('Неверный формат URL').optional().or(z.literal('')),
 })
