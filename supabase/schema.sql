@@ -6,10 +6,14 @@ CREATE TABLE IF NOT EXISTS public.subscriptions (
     currency TEXT NOT NULL,
     billing_period TEXT NOT NULL CHECK (billing_period IN ('monthly', 'yearly')),
     next_payment_date TIMESTAMP WITH TIME ZONE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'trial', 'paused', 'canceled', 'archived')),
     category TEXT,
     url TEXT,
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     google_calendar_event_id TEXT,
+    calendar_sync_status TEXT NOT NULL DEFAULT 'not_connected' CHECK (calendar_sync_status IN ('not_connected', 'pending', 'synced', 'error', 'disabled')),
+    calendar_sync_error TEXT,
+    calendar_sync_attempted_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -19,6 +23,10 @@ CREATE INDEX idx_subscriptions_user_id ON public.subscriptions(user_id);
 
 -- Create index for next_payment_date for sorting
 CREATE INDEX idx_subscriptions_next_payment_date ON public.subscriptions(next_payment_date);
+
+-- Create indexes for status filters and sync diagnostics
+CREATE INDEX idx_subscriptions_status ON public.subscriptions(status);
+CREATE INDEX idx_subscriptions_calendar_sync_status ON public.subscriptions(calendar_sync_status);
 
 -- Enable Row Level Security
 ALTER TABLE public.subscriptions ENABLE ROW LEVEL SECURITY;

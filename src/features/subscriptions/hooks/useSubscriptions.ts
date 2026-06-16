@@ -8,6 +8,14 @@ type Subscription = Database['public']['Tables']['subscriptions']['Row']
 type SubscriptionInsert = Database['public']['Tables']['subscriptions']['Insert']
 type SubscriptionUpdate = Database['public']['Tables']['subscriptions']['Update']
 
+const normalizeSubscription = (subscription: Subscription): Subscription => ({
+  ...subscription,
+  status: subscription.status ?? 'active',
+  calendar_sync_status: subscription.calendar_sync_status ?? 'not_connected',
+  calendar_sync_error: subscription.calendar_sync_error ?? null,
+  calendar_sync_attempted_at: subscription.calendar_sync_attempted_at ?? null,
+})
+
 export function useSubscriptions() {
   const { user } = useAuth()
 
@@ -24,17 +32,18 @@ export function useSubscriptions() {
       if (error) throw error
       
       const subscriptions = (data as Subscription[]).map(subscription => {
+        const normalizedSubscription = normalizeSubscription(subscription)
         const upcomingPaymentDate = calculateUpcomingPaymentDate(
-          new Date(subscription.next_payment_date),
-          subscription.billing_period
+          new Date(normalizedSubscription.next_payment_date),
+          normalizedSubscription.billing_period
         )
 
-        if (upcomingPaymentDate.getTime() === new Date(subscription.next_payment_date).getTime()) {
-          return subscription
+        if (upcomingPaymentDate.getTime() === new Date(normalizedSubscription.next_payment_date).getTime()) {
+          return normalizedSubscription
         }
 
         return {
-          ...subscription,
+          ...normalizedSubscription,
           next_payment_date: upcomingPaymentDate.toISOString(),
         }
       })

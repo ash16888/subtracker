@@ -25,28 +25,28 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/44</span>
+                <span class='fraction'>0/32</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/44</span>
+                <span class='fraction'>0/32</span>
             </div>
         
             
@@ -126,28 +126,23 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -158,7 +153,20 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -167,78 +175,70 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// Глобальный загрузчик Google Identity Services
-<span class="cstat-no" title="statement not covered" >let googleIdentityLoaded = false</span>
-<span class="cstat-no" title="statement not covered" >let loadingPromise: Promise&lt;void&gt; | null = null</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// Глобальный загрузчик Google Identity Services
+let googleIdentityLoaded = <span class="cstat-no" title="statement not covered" >false</span>
+let loadingPromise: Promise&lt;void&gt; | null = <span class="cstat-no" title="statement not covered" >null</span>
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export const loadGoogleApis = (): Promise&lt;void&gt; =&gt; {</span>
+export const <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >loadGoogleApis = (): Promise&lt;void&gt; =&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  if (googleIdentityLoaded) {</span>
 <span class="cstat-no" title="statement not covered" >    return Promise.resolve()</span>
-<span class="cstat-no" title="statement not covered" >  }</span>
+  }
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  if (loadingPromise) {</span>
 <span class="cstat-no" title="statement not covered" >    return loadingPromise</span>
-<span class="cstat-no" title="statement not covered" >  }</span>
+  }
 &nbsp;
-<span class="cstat-no" title="statement not covered" >  loadingPromise = new Promise((resolve, reject) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >  loadingPromise = new <span class="fstat-no" title="function not covered" >Promise((r</span>esolve, reject) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    try {</span>
       // Проверяем, не загружен ли уже скрипт Google Identity Services
-<span class="cstat-no" title="statement not covered" >      const existingGsiScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]')</span>
+      const existingGsiScript = <span class="cstat-no" title="statement not covered" >document.querySelector('script[src="https://accounts.google.com/gsi/client"]')</span>
 &nbsp;
 <span class="cstat-no" title="statement not covered" >      if (existingGsiScript) {</span>
 <span class="cstat-no" title="statement not covered" >        googleIdentityLoaded = true</span>
 <span class="cstat-no" title="statement not covered" >        resolve()</span>
 <span class="cstat-no" title="statement not covered" >        return</span>
-<span class="cstat-no" title="statement not covered" >      }</span>
+      }
 &nbsp;
       // Загружаем Google Identity Services
-<span class="cstat-no" title="statement not covered" >      const gisScript = document.createElement('script')</span>
+      const gisScript = <span class="cstat-no" title="statement not covered" >document.createElement('script')</span>
 <span class="cstat-no" title="statement not covered" >      gisScript.src = 'https://accounts.google.com/gsi/client'</span>
 <span class="cstat-no" title="statement not covered" >      gisScript.async = true</span>
 <span class="cstat-no" title="statement not covered" >      gisScript.defer = true</span>
       
-<span class="cstat-no" title="statement not covered" >      gisScript.onload = () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      gisScript.<span class="fstat-no" title="function not covered" >onload = () =&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >        googleIdentityLoaded = true</span>
 <span class="cstat-no" title="statement not covered" >        resolve()</span>
-<span class="cstat-no" title="statement not covered" >      }</span>
+      }
       
-<span class="cstat-no" title="statement not covered" >      gisScript.onerror = () =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      gisScript.<span class="fstat-no" title="function not covered" >onerror = () =&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >        reject(new Error('Failed to load Google Identity Services'))</span>
-<span class="cstat-no" title="statement not covered" >      }</span>
+      }
       
 <span class="cstat-no" title="statement not covered" >      document.body.appendChild(gisScript)</span>
-<span class="cstat-no" title="statement not covered" >    } catch (error) {</span>
+    } catch (error: unknown) {
 <span class="cstat-no" title="statement not covered" >      reject(error)</span>
-<span class="cstat-no" title="statement not covered" >    }</span>
-<span class="cstat-no" title="statement not covered" >  })</span>
+    }
+  })
 &nbsp;
 <span class="cstat-no" title="statement not covered" >  return loadingPromise</span>
-<span class="cstat-no" title="statement not covered" >}</span>
+}
 &nbsp;
-<span class="cstat-no" title="statement not covered" >export const ensureGoogleApisLoaded = async (): Promise&lt;boolean&gt; =&gt; {</span>
+export const ensureGoogleApisLoaded = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >async (): Promise&lt;boolean&gt; =&gt; {</span></span>
 <span class="cstat-no" title="statement not covered" >  try {</span>
 <span class="cstat-no" title="statement not covered" >    await loadGoogleApis()</span>
 <span class="cstat-no" title="statement not covered" >    return true</span>
-<span class="cstat-no" title="statement not covered" >  } catch (error) {</span>
+  } catch (error: unknown) {
 <span class="cstat-no" title="statement not covered" >    console.error('Failed to load Google Identity Services:', error)</span>
 <span class="cstat-no" title="statement not covered" >    return false</span>
-<span class="cstat-no" title="statement not covered" >  }</span>
-<span class="cstat-no" title="statement not covered" >}</span></pre></td></tr></table></pre>
+  }
+}</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-16T04:55:21.155Z
+                at 2026-06-16T03:57:36.175Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -4,11 +4,15 @@ import { useSubscriptions } from '../features/subscriptions/hooks/useSubscriptio
 import { useAIInsights } from '../features/ai-insights/hooks/useAIInsights';
 import { GenerateInsightsButton } from '../features/ai-insights/components/GenerateInsightsButton';
 import { InsightsList } from '../features/ai-insights/components/InsightsList';
-import type { Subscription } from '../types/subscription';
+import { getBillableSubscriptions } from '../lib/utils/calculations';
 
 export const AIInsightsPage: React.FC = () => {
   const { user } = useAuth();
   const { data: subscriptions = [], isLoading: isLoadingSubscriptions } = useSubscriptions();
+  const billableSubscriptions = React.useMemo(
+    () => getBillableSubscriptions(subscriptions),
+    [subscriptions]
+  );
   const { 
     insights, 
     isLoadingInsights, 
@@ -19,14 +23,14 @@ export const AIInsightsPage: React.FC = () => {
   } = useAIInsights();
 
   const handleGenerateInsights = () => {
-    if (!user || !subscriptions.length) return;
+    if (!user || !billableSubscriptions.length) return;
 
     const request = {
       userId: user.id,
-      subscriptions: subscriptions
-        .filter((sub: Subscription) => sub.id) // Filter out any subscriptions without IDs
-        .map((sub: Subscription) => ({
-          id: sub.id!,
+      subscriptions: billableSubscriptions
+        .filter((sub) => sub.id)
+        .map((sub) => ({
+          id: sub.id,
           name: sub.name,
           amount: sub.amount,
           currency: sub.currency,
@@ -40,7 +44,7 @@ export const AIInsightsPage: React.FC = () => {
     generateInsights(request);
   };
 
-  const canGenerateInsights = !isLoadingSubscriptions && subscriptions.length > 0;
+  const canGenerateInsights = !isLoadingSubscriptions && billableSubscriptions.length > 0;
 
   return (
     <div className="space-y-6">
@@ -88,7 +92,7 @@ export const AIInsightsPage: React.FC = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Загружаем ваши подписки...</p>
         </div>
-      ) : subscriptions.length === 0 ? (
+      ) : billableSubscriptions.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500">
             Добавьте подписки, чтобы получить персонализированные инсайты

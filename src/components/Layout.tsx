@@ -25,7 +25,7 @@ export function Layout({ children }: LayoutProps) {
               <h1 className="text-2xl font-bold gradient-text">SubTracker</h1>
               {monthlyTotal > 0 && (
                 <div className="ml-8 text-sm text-gray-600">
-                  Расходы в этом месяце: 
+                  Платежи в этом месяце:
                   <span className="font-semibold text-gray-900 ml-1">
                     {formatCurrency(monthlyTotal, '₽')}
                   </span>

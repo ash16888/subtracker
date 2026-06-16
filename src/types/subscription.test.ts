@@ -140,6 +140,7 @@ describe('Subscription validation behavior', () => {
         currency: '₽',
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
+        status: 'active' as const,
         category: 'Развлечения',
         url: 'https://netflix.com',
       }
@@ -155,6 +156,7 @@ describe('Subscription validation behavior', () => {
         currency: '₽',
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
+        status: 'active' as const,
       }
 
       const result = subscriptionFormSchema.safeParse(formData)
@@ -176,6 +178,7 @@ describe('Subscription validation behavior', () => {
         currency: '₽',
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
+        status: 'active' as const,
       }
 
       const result = subscriptionFormSchema.safeParse(formData)
@@ -189,6 +192,7 @@ describe('Subscription validation behavior', () => {
         currency: '₽',
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
+        status: 'active' as const,
         url: '',
       }
 
@@ -203,6 +207,7 @@ describe('Subscription validation behavior', () => {
         currency: '₽',
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
+        status: 'active' as const,
         url: 'not-a-url',
       }
 
@@ -225,6 +230,7 @@ describe('Subscription validation behavior', () => {
         currency: '₽',
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
+        status: 'active' as const,
       }
 
       const result = subscriptionFormSchema.safeParse(formData)
@@ -246,6 +252,7 @@ describe('Subscription validation behavior', () => {
         currency: '',
         billing_period: 'monthly' as const,
         next_payment_date: '2024-01-15',
+        status: 'active' as const,
       }
 
       const result = subscriptionFormSchema.safeParse(formData)
@@ -267,6 +274,7 @@ describe('Subscription validation behavior', () => {
         currency: '₽',
         billing_period: 'monthly' as const,
         next_payment_date: '',
+        status: 'active' as const,
       }
 
       const result = subscriptionFormSchema.safeParse(formData)

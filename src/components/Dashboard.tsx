@@ -1,7 +1,15 @@
 import { useMemo } from 'react'
 import type { Database } from '../types/database.types'
-import { formatCurrency } from '../lib/utils/calculations'
-import { addMonths, startOfMonth, endOfMonth } from 'date-fns'
+import {
+  calculateAverageMonthlyPerSubscription,
+  calculateDueTotalForMonth,
+  calculateMonthlyEquivalentAmount,
+  calculateMonthlyEquivalentTotal,
+  calculateYearlyTotal,
+  formatCurrency,
+  getBillableSubscriptions,
+} from '../lib/utils/calculations'
+import { addMonths } from 'date-fns'
 import { StatsCards } from './StatsCards'
 import { PieChart } from './PieChart'
 import { getCategoryIcon } from '../utils/categoryIcons'
@@ -32,18 +40,19 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export function Dashboard({ subscriptions }: DashboardProps) {
   const stats = useMemo(() => {
-    const totalMonthly = subscriptions.reduce((sum, sub) => sum + Number(sub.amount), 0)
-    const totalYearly = totalMonthly * 12
+    const billableSubscriptions = getBillableSubscriptions(subscriptions)
+    const totalMonthly = calculateMonthlyEquivalentTotal(billableSubscriptions)
+    const totalYearly = calculateYearlyTotal(billableSubscriptions)
     
     // Статистика по категориям
     const categoryStats: Record<string, { amount: number; count: number }> = {}
     
-    subscriptions.forEach(sub => {
+    billableSubscriptions.forEach(sub => {
       const category = sub.category || 'Другое'
       if (!categoryStats[category]) {
         categoryStats[category] = { amount: 0, count: 0 }
       }
-      categoryStats[category].amount += Number(sub.amount)
+      categoryStats[category].amount += calculateMonthlyEquivalentAmount(sub)
       categoryStats[category].count += 1
     })
 
@@ -52,7 +61,7 @@ export function Dashboard({ subscriptions }: DashboardProps) {
         category,
         amount: stats.amount,
         count: stats.count,
-        percentage: (stats.amount / totalMonthly) * 100,
+        percentage: totalMonthly > 0 ? (stats.amount / totalMonthly) * 100 : 0,
         color: CATEGORY_COLORS[category] || CATEGORY_COLORS['Другое']
       }))
       .sort((a, b) => b.amount - a.amount)
@@ -60,33 +69,20 @@ export function Dashboard({ subscriptions }: DashboardProps) {
     // Предстоящие платежи
     const currentMonth = new Date()
     const nextMonth = addMonths(currentMonth, 1)
-    const currentMonthStart = startOfMonth(currentMonth)
-    const currentMonthEnd = endOfMonth(currentMonth)
-    const nextMonthStart = startOfMonth(nextMonth)
-    const nextMonthEnd = endOfMonth(nextMonth)
-
-    const currentMonthPayments = subscriptions.filter(sub => {
-      const paymentDate = new Date(sub.next_payment_date)
-      return paymentDate >= currentMonthStart && paymentDate <= currentMonthEnd
-    })
-
-    const nextMonthPayments = subscriptions.filter(sub => {
-      const paymentDate = new Date(sub.next_payment_date)
-      return paymentDate >= nextMonthStart && paymentDate <= nextMonthEnd
-    })
 
     return {
       totalMonthly,
       totalYearly,
       categoryList,
-      subscriptionCount: subscriptions.length,
-      averagePerSubscription: totalMonthly / (subscriptions.length || 1),
-      currentMonthTotal: currentMonthPayments.reduce((sum, sub) => sum + Number(sub.amount), 0),
-      nextMonthTotal: nextMonthPayments.reduce((sum, sub) => sum + Number(sub.amount), 0)
+      billableSubscriptions,
+      subscriptionCount: billableSubscriptions.length,
+      averagePerSubscription: calculateAverageMonthlyPerSubscription(billableSubscriptions),
+      currentMonthTotal: calculateDueTotalForMonth(billableSubscriptions, currentMonth),
+      nextMonthTotal: calculateDueTotalForMonth(billableSubscriptions, nextMonth)
     }
   }, [subscriptions])
 
-  const maxAmount = Math.max(...stats.categoryList.map(cat => cat.amount))
+  const maxAmount = Math.max(0, ...stats.categoryList.map(cat => cat.amount))
 
   return (
     <div className="space-y-6">
@@ -107,7 +103,7 @@ export function Dashboard({ subscriptions }: DashboardProps) {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">В месяц</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">В среднем в месяц</dt>
                   <dd className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalMonthly, '₽')}</dd>
                 </dl>
               </div>
@@ -127,7 +123,7 @@ export function Dashboard({ subscriptions }: DashboardProps) {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">В год</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Прогноз за год</dt>
                   <dd className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalYearly, '₽')}</dd>
                 </dl>
               </div>
@@ -178,7 +174,7 @@ export function Dashboard({ subscriptions }: DashboardProps) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Круговая диаграмма */}
-        <PieChart subscriptions={subscriptions} />
+        <PieChart subscriptions={stats.billableSubscriptions} />
         
         {/* Распределение по категориям */}
         <div className="card group">
@@ -234,7 +230,7 @@ export function Dashboard({ subscriptions }: DashboardProps) {
                         className="h-3 rounded-full transition-all duration-700 ease-out relative"
                         style={{
                           backgroundColor: category.color,
-                          width: `${(category.amount / maxAmount) * 100}%`,
+                          width: maxAmount > 0 ? `${(category.amount / maxAmount) * 100}%` : '0%',
                           animationDelay: `${index * 100}ms`
                         }}
                       >

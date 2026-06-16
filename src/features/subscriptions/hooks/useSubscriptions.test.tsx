@@ -80,6 +80,10 @@ const mockSubscription = {
   url: null,
   user_id: 'user-1',
   google_calendar_event_id: null,
+  status: 'active' as const,
+  calendar_sync_status: 'not_connected' as const,
+  calendar_sync_error: null,
+  calendar_sync_attempted_at: null,
   created_at: '2024-01-01T00:00:00Z',
   updated_at: '2024-01-01T00:00:00Z'
 }

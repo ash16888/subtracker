@@ -2,7 +2,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format } from 'date-fns'
 import { useCreateSubscriptionWithCalendar, useUpdateSubscriptionWithCalendar } from '../../calendar/hooks/useCalendarSubscriptions'
-import { CATEGORIES, subscriptionFormSchema, type SubscriptionFormData } from '../../../types/subscription'
+import { CATEGORIES, SUBSCRIPTION_STATUSES, subscriptionFormSchema, type SubscriptionFormData } from '../../../types/subscription'
 import type { Database } from '../../../types/database.types'
 
 type Subscription = Database['public']['Tables']['subscriptions']['Row']
@@ -30,12 +30,14 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
       currency: subscription.currency,
       billing_period: subscription.billing_period,
       next_payment_date: format(new Date(subscription.next_payment_date), 'yyyy-MM-dd'),
+      status: subscription.status,
       category: subscription.category || '',
       url: subscription.url || '',
     } : {
       currency: '₽',
       billing_period: 'monthly',
       next_payment_date: format(new Date(), 'yyyy-MM-dd'),
+      status: 'active',
     },
   })
 
@@ -49,6 +51,7 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
           currency: data.currency,
           billing_period: data.billing_period,
           next_payment_date: new Date(data.next_payment_date).toISOString(),
+          status: data.status,
           category: data.category || null,
           url: data.url || null,
         })
@@ -59,6 +62,7 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
           currency: data.currency,
           billing_period: data.billing_period,
           next_payment_date: new Date(data.next_payment_date).toISOString(),
+          status: data.status,
           category: data.category || null,
           url: data.url || null,
         })
@@ -163,6 +167,23 @@ export function SubscriptionForm({ onClose, subscription }: SubscriptionFormProp
               <p className="mt-1 text-sm text-red-600">{errors.next_payment_date.message}</p>
             )}
           </div>
+        </div>
+
+        <div>
+          <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+            Статус
+          </label>
+          <select
+            id="status"
+            {...register('status')}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          >
+            {SUBSCRIPTION_STATUSES.map((status) => (
+              <option key={status.value} value={status.value}>
+                {status.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

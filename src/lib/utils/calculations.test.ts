@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
 import {
+  calculateAverageMonthlyPerSubscription,
+  calculateDueTotalForMonth,
+  calculateMonthlyEquivalentTotal,
   calculateMonthlyTotal,
   calculateNextPaymentDate,
   calculateUpcomingPaymentDate,
+  calculateYearlyTotal,
   formatCurrency,
+  isSubscriptionBillable,
 } from './calculations'
 import type { Subscription } from '../../types/subscription'
 
@@ -24,6 +29,7 @@ type StubSub = {
   amount: number | string
   billing_period: 'monthly' | 'yearly'
   next_payment_date: string
+  status?: 'active' | 'trial' | 'paused' | 'canceled' | 'archived'
 }
 
 describe('calculateMonthlyTotal', () => {
@@ -38,7 +44,7 @@ describe('calculateMonthlyTotal', () => {
     expect(calculateMonthlyTotal(subs as Subscription[])).toBe(999)
   })
 
-  it('converts yearly amount to monthly fraction when due this month', () => {
+  it('counts the full yearly payment when it is due this month', () => {
     const subs: StubSub[] = [
       {
         amount: 12000,
@@ -46,7 +52,7 @@ describe('calculateMonthlyTotal', () => {
         next_payment_date: '2024-01-02T00:00:00Z',
       },
     ]
-    expect(calculateMonthlyTotal(subs as Subscription[])).toBeCloseTo(1000) // 12000 / 12
+    expect(calculateMonthlyTotal(subs as Subscription[])).toBe(12000)
   })
 
   it('ignores subscriptions whose next payment date is outside the current month', () => {
@@ -89,11 +95,60 @@ describe('calculateMonthlyTotal', () => {
         next_payment_date: '2024-01-25T00:00:00Z',
       },
     ]
-    expect(calculateMonthlyTotal(subs as Subscription[])).toBeCloseTo(1700) // 1200 + 6000/12 = 1700
+    expect(calculateMonthlyTotal(subs as Subscription[])).toBe(7200)
   })
 
   it('returns 0 when subscription list is empty', () => {
     expect(calculateMonthlyTotal([] as Subscription[])).toBe(0)
+  })
+})
+
+describe('normalized totals', () => {
+  it('calculates monthly equivalent totals for recurring cost analytics', () => {
+    const subs: StubSub[] = [
+      {
+        amount: 1200,
+        billing_period: 'monthly',
+        next_payment_date: '2024-01-10T00:00:00Z',
+      },
+      {
+        amount: 6000,
+        billing_period: 'yearly',
+        next_payment_date: '2024-01-25T00:00:00Z',
+      },
+    ]
+
+    expect(calculateMonthlyEquivalentTotal(subs as Subscription[])).toBeCloseTo(1700)
+    expect(calculateYearlyTotal(subs as Subscription[])).toBe(20400)
+    expect(calculateAverageMonthlyPerSubscription(subs as Subscription[])).toBeCloseTo(850)
+  })
+
+  it('excludes paused, canceled, and archived subscriptions from billable totals', () => {
+    const subs: StubSub[] = [
+      {
+        amount: 1000,
+        billing_period: 'monthly',
+        next_payment_date: '2024-01-10T00:00:00Z',
+        status: 'active',
+      },
+      {
+        amount: 2000,
+        billing_period: 'monthly',
+        next_payment_date: '2024-01-10T00:00:00Z',
+        status: 'paused',
+      },
+      {
+        amount: 3000,
+        billing_period: 'monthly',
+        next_payment_date: '2024-01-10T00:00:00Z',
+        status: 'archived',
+      },
+    ]
+
+    expect(isSubscriptionBillable(subs[0] as Subscription)).toBe(true)
+    expect(isSubscriptionBillable(subs[1] as Subscription)).toBe(false)
+    expect(calculateDueTotalForMonth(subs as Subscription[])).toBe(1000)
+    expect(calculateMonthlyEquivalentTotal(subs as Subscription[])).toBe(1000)
   })
 })
 

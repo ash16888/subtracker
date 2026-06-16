@@ -1,6 +1,13 @@
 import { useMemo } from 'react'
 import type { Database } from '../types/database.types'
-import { formatCurrency } from '../lib/utils/calculations'
+import {
+  calculateAverageMonthlyPerSubscription,
+  calculateDueTotalForMonth,
+  calculateMonthlyEquivalentTotal,
+  calculateYearlyTotal,
+  formatCurrency,
+  getBillableSubscriptions,
+} from '../lib/utils/calculations'
 import { addMonths, format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
@@ -10,35 +17,44 @@ interface StatsCardsProps {
   subscriptions: Subscription[]
 }
 
+const formatSubscriptionCount = (count: number) => {
+  if (count % 10 === 1 && count % 100 !== 11) {
+    return `${count} подписка`
+  }
+
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) {
+    return `${count} подписки`
+  }
+
+  return `${count} подписок`
+}
+
 export function StatsCards({ subscriptions }: StatsCardsProps) {
   const stats = useMemo(() => {
-    const totalMonthly = subscriptions.reduce((sum, sub) => sum + Number(sub.amount), 0)
-    const totalYearly = totalMonthly * 12
+    const billableSubscriptions = getBillableSubscriptions(subscriptions)
+    const totalMonthly = calculateMonthlyEquivalentTotal(billableSubscriptions)
+    const totalYearly = calculateYearlyTotal(billableSubscriptions)
+    const averageMonthly = calculateAverageMonthlyPerSubscription(billableSubscriptions)
     
     // Самая дорогая подписка
-    const mostExpensive = subscriptions.reduce((max, sub) => 
+    const mostExpensive = billableSubscriptions.reduce((max, sub) => 
       Number(sub.amount) > Number(max.amount) ? sub : max, 
-      subscriptions[0] || { amount: 0, name: '', currency: '₽' }
+      billableSubscriptions[0] || { amount: 0, name: '', currency: '₽' }
     )
     
     // Самая дешёвая подписка
-    const cheapest = subscriptions.reduce((min, sub) => 
+    const cheapest = billableSubscriptions.reduce((min, sub) => 
       Number(sub.amount) < Number(min.amount) ? sub : min,
-      subscriptions[0] || { amount: 0, name: '', currency: '₽' }
+      billableSubscriptions[0] || { amount: 0, name: '', currency: '₽' }
     )
     
     // Прогноз на следующий месяц
     const nextMonth = addMonths(new Date(), 1)
-    const nextMonthPayments = subscriptions.filter(sub => {
-      const paymentDate = new Date(sub.next_payment_date)
-      return paymentDate.getMonth() === nextMonth.getMonth() && 
-             paymentDate.getFullYear() === nextMonth.getFullYear()
-    })
-    const nextMonthTotal = nextMonthPayments.reduce((sum, sub) => sum + Number(sub.amount), 0)
+    const nextMonthTotal = calculateDueTotalForMonth(billableSubscriptions, nextMonth)
     
     // Самая популярная категория
     const categoryCounts: Record<string, number> = {}
-    subscriptions.forEach(sub => {
+    billableSubscriptions.forEach(sub => {
       const category = sub.category || 'Другое'
       categoryCounts[category] = (categoryCounts[category] || 0) + 1
     })
@@ -48,16 +64,17 @@ export function StatsCards({ subscriptions }: StatsCardsProps) {
     return {
       totalMonthly,
       totalYearly,
+      averageMonthly,
       mostExpensive,
       cheapest,
       nextMonthTotal,
       popularCategory: popularCategory ? popularCategory[0] : 'Нет данных',
       categoryCount: popularCategory ? popularCategory[1] : 0,
-      subscriptionCount: subscriptions.length
+      subscriptionCount: billableSubscriptions.length
     }
   }, [subscriptions])
 
-  if (subscriptions.length === 0) {
+  if (stats.subscriptionCount === 0) {
     return null
   }
 
@@ -134,7 +151,7 @@ export function StatsCards({ subscriptions }: StatsCardsProps) {
             <div className="space-y-1">
               <p className="text-violet-100 text-xs uppercase tracking-wider font-semibold">Популярная категория</p>
               <p className="text-3xl font-bold tracking-tight">{stats.popularCategory}</p>
-              <p className="text-violet-100 text-sm font-medium">{stats.categoryCount} подписок</p>
+              <p className="text-violet-100 text-sm font-medium">{formatSubscriptionCount(stats.categoryCount)}</p>
             </div>
             <div className="bg-white/20 backdrop-blur-md rounded-2xl p-3 group-hover:scale-110 transition-transform duration-300">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -173,8 +190,8 @@ export function StatsCards({ subscriptions }: StatsCardsProps) {
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <p className="text-cyan-100 text-xs uppercase tracking-wider font-semibold">Средний чек</p>
-              <p className="text-3xl font-bold tracking-tight">{formatCurrency(Math.round(stats.totalMonthly / stats.subscriptionCount), '₽')}</p>
-              <p className="text-cyan-100 text-sm font-medium">За подписку</p>
+              <p className="text-3xl font-bold tracking-tight">{formatCurrency(Math.round(stats.averageMonthly), '₽')}</p>
+              <p className="text-cyan-100 text-sm font-medium">В среднем в месяц</p>
             </div>
             <div className="bg-white/20 backdrop-blur-md rounded-2xl p-3 group-hover:scale-110 transition-transform duration-300">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -4,6 +4,7 @@ import type { Database } from '../../../types/database.types'
 import {
   createSubscriptionWithCalendar,
   deleteSubscriptionWithCalendar,
+  retrySubscriptionCalendarSync,
   updateSubscriptionWithCalendar,
 } from '../services/subscriptionCalendarSync'
 
@@ -48,6 +49,21 @@ export function useDeleteSubscriptionWithCalendar() {
     mutationFn: async (id: string) => {
       if (!user) throw new Error('User not authenticated')
       await deleteSubscriptionWithCalendar(user, id)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subscriptions'] })
+    },
+  })
+}
+
+export function useRetrySubscriptionCalendarSync() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!user) throw new Error('User not authenticated')
+      return retrySubscriptionCalendarSync(user, id)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['subscriptions'] })

@@ -7,6 +7,7 @@ export const subscriptionSchema = z.object({
   currency: z.string().min(1, 'Currency is required'),
   billing_period: z.enum(['monthly', 'yearly']),
   next_payment_date: z.string().datetime(),
+  status: z.enum(['active', 'trial', 'paused', 'canceled', 'archived']).default('active'),
   category: z.string().nullable().optional(),
   url: z.string()
     .refine((val) => {
@@ -22,6 +23,9 @@ export const subscriptionSchema = z.object({
     .optional(),
   user_id: z.string().uuid().optional(),
   google_calendar_event_id: z.string().nullable().optional(),
+  calendar_sync_status: z.enum(['not_connected', 'pending', 'synced', 'error', 'disabled']).default('not_connected'),
+  calendar_sync_error: z.string().nullable().optional(),
+  calendar_sync_attempted_at: z.string().datetime().nullable().optional(),
 })
 
 export const subscriptionFormSchema = z.object({
@@ -32,6 +36,7 @@ export const subscriptionFormSchema = z.object({
   currency: z.string().min(1, 'Валюта обязательна'),
   billing_period: z.enum(['monthly', 'yearly']),
   next_payment_date: z.string().min(1, 'Дата обязательна'),
+  status: z.enum(['active', 'trial', 'paused', 'canceled', 'archived']),
   category: z.string().optional(),
   url: z.string().url('Неверный формат URL').optional().or(z.literal('')),
 })
@@ -50,3 +55,11 @@ export const CATEGORIES = [
 ] as const
 
 export type Category = (typeof CATEGORIES)[number]
+
+export const SUBSCRIPTION_STATUSES = [
+  { value: 'active', label: 'Активна' },
+  { value: 'trial', label: 'Пробный период' },
+  { value: 'paused', label: 'Приостановлена' },
+  { value: 'canceled', label: 'Отменена' },
+  { value: 'archived', label: 'Архив' },
+] as const

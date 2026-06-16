@@ -4,9 +4,14 @@ import { StatsCards } from './StatsCards'
 import type { Database } from '../types/database.types'
 
 // Mock the formatCurrency function
-vi.mock('../lib/utils/calculations', () => ({
-  formatCurrency: vi.fn((amount: number, currency: string) => `${amount} ${currency}`)
-}))
+vi.mock('../lib/utils/calculations', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/utils/calculations')>()
+
+  return {
+    ...actual,
+    formatCurrency: vi.fn((amount: number, currency: string) => `${amount} ${currency}`)
+  }
+})
 
 // Fix the date for consistent testing
 const FIXED_DATE = new Date('2024-01-15T10:00:00Z')
@@ -109,7 +114,22 @@ describe('StatsCards', () => {
       
       // Average: (600 + 900 + 1500) / 3 = 1000
       expect(screen.getByText('1000 ₽')).toBeInTheDocument()
-      expect(screen.getByText('За подписку')).toBeInTheDocument()
+      expect(screen.getByText('В среднем в месяц')).toBeInTheDocument()
+    })
+
+    it('should exclude paused, canceled, and archived subscriptions from totals', () => {
+      const subscriptions = [
+        createMockSubscription({ amount: 1000, name: 'Active Service', status: 'active' }),
+        createMockSubscription({ amount: 5000, name: 'Paused Service', status: 'paused' }),
+        createMockSubscription({ amount: 6000, name: 'Archived Service', status: 'archived' }),
+      ]
+
+      render(<StatsCards subscriptions={subscriptions} />)
+
+      expect(screen.getAllByText('Active Service')).toHaveLength(2)
+      expect(screen.queryByText('Paused Service')).not.toBeInTheDocument()
+      expect(screen.queryByText('Archived Service')).not.toBeInTheDocument()
+      expect(screen.getByText('12000 ₽')).toBeInTheDocument()
     })
 
     it('should handle single subscription scenario', () => {
@@ -128,7 +148,7 @@ describe('StatsCards', () => {
       expect(serviceNames).toHaveLength(2) // Should appear in both cards
       
       expect(screen.getByText('Развлечения')).toBeInTheDocument()
-      expect(screen.getByText('1 подписок')).toBeInTheDocument()
+      expect(screen.getByText('1 подписка')).toBeInTheDocument()
     })
   })
 
@@ -184,7 +204,7 @@ describe('StatsCards', () => {
       render(<StatsCards subscriptions={subscriptions} />)
       
       expect(screen.getByText('Развлечения')).toBeInTheDocument()
-      expect(screen.getByText('3 подписок')).toBeInTheDocument()
+      expect(screen.getByText('3 подписки')).toBeInTheDocument()
     })
 
     it('should handle null categories as "Другое"', () => {
@@ -197,7 +217,7 @@ describe('StatsCards', () => {
       render(<StatsCards subscriptions={subscriptions} />)
       
       expect(screen.getByText('Другое')).toBeInTheDocument()
-      expect(screen.getByText('2 подписок')).toBeInTheDocument()
+      expect(screen.getByText('2 подписки')).toBeInTheDocument()
     })
 
     it('should handle tie in category counts', () => {
@@ -209,7 +229,7 @@ describe('StatsCards', () => {
       render(<StatsCards subscriptions={subscriptions} />)
       
       // Should show one of the categories with 1 subscription
-      expect(screen.getByText('1 подписок')).toBeInTheDocument()
+      expect(screen.getByText('1 подписка')).toBeInTheDocument()
     })
 
     it('should show "Нет данных" when no categories available', () => {

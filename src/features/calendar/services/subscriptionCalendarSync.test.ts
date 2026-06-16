@@ -3,6 +3,7 @@ import { supabase } from '../../../lib/supabase'
 import { googleCalendarService } from '../../../services/googleCalendar'
 import {
   deleteSubscriptionWithCalendar,
+  retrySubscriptionCalendarSync,
   updateSubscriptionWithCalendar,
 } from './subscriptionCalendarSync'
 
@@ -37,6 +38,10 @@ const subscription = {
   url: null,
   user_id: 'user-1',
   google_calendar_event_id: 'event-1',
+  status: 'active' as const,
+  calendar_sync_status: 'synced' as const,
+  calendar_sync_error: null,
+  calendar_sync_attempted_at: '2026-01-01T00:00:00.000Z',
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-01T00:00:00.000Z',
 }
@@ -121,7 +126,12 @@ describe('subscription calendar synchronization', () => {
       deleteSubscriptionWithCalendar(googleUser, subscription.id)
     ).rejects.toThrow('Failed to delete Google Calendar reminder')
 
-    expect(restoreChain.insert).toHaveBeenCalledWith(subscription)
+    expect(restoreChain.insert).toHaveBeenCalledWith(expect.objectContaining({
+      ...subscription,
+      calendar_sync_status: 'error',
+      calendar_sync_error: 'Failed to delete Google Calendar reminder',
+      calendar_sync_attempted_at: expect.any(String),
+    }))
     expect(deleteChain.delete.mock.invocationCallOrder[0]).toBeLessThan(
       vi.mocked(googleCalendarService.deletePaymentReminder).mock.invocationCallOrder[0]
     )
@@ -156,5 +166,45 @@ describe('subscription calendar synchronization', () => {
     expect(googleCalendarService.deletePaymentReminder).toHaveBeenNthCalledWith(1, 'event-1')
     expect(googleCalendarService.deletePaymentReminder).toHaveBeenNthCalledWith(2, 'event-2')
     expect(rollbackChain.update).toHaveBeenCalled()
+  })
+
+  it('retries a failed calendar synchronization and clears the error state', async () => {
+    const unsyncedSubscription = {
+      ...subscription,
+      google_calendar_event_id: null,
+      calendar_sync_status: 'error' as const,
+      calendar_sync_error: 'Google Calendar is unavailable',
+    }
+    const fetchChain = createSelectChain({ data: unsyncedSubscription, error: null })
+    const saveEventChain = createUpdateChain({
+      data: {
+        ...unsyncedSubscription,
+        google_calendar_event_id: 'event-2',
+        calendar_sync_status: 'synced',
+        calendar_sync_error: null,
+      },
+      error: null,
+    })
+
+    vi.mocked(supabase.from)
+      .mockReturnValueOnce(fetchChain as never)
+      .mockReturnValueOnce(saveEventChain as never)
+    vi.mocked(googleCalendarService.isCalendarAccessible).mockResolvedValue(true)
+    vi.mocked(googleCalendarService.createPaymentReminder).mockResolvedValue('event-2')
+
+    await expect(
+      retrySubscriptionCalendarSync(googleUser, subscription.id)
+    ).resolves.toEqual(expect.objectContaining({
+      google_calendar_event_id: 'event-2',
+      calendar_sync_status: 'synced',
+      calendar_sync_error: null,
+    }))
+
+    expect(saveEventChain.update).toHaveBeenCalledWith(expect.objectContaining({
+      google_calendar_event_id: 'event-2',
+      calendar_sync_status: 'synced',
+      calendar_sync_error: null,
+      calendar_sync_attempted_at: expect.any(String),
+    }))
   })
 })

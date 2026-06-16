@@ -2,32 +2,103 @@ import { addMonths, addYears, startOfDay, startOfMonth, endOfMonth, isBefore, is
 import type { Database } from '../../types/database.types'
 
 type Subscription = Database['public']['Tables']['subscriptions']['Row']
+type BillingPeriod = Subscription['billing_period']
+type SubscriptionStatus = Subscription['status']
 
-export function calculateMonthlyTotal(subscriptions: Subscription[]): number {
-  const now = new Date()
-  const monthStart = startOfMonth(now)
-  const monthEnd = endOfMonth(now)
+const BILLABLE_STATUSES = new Set<SubscriptionStatus>(['active', 'trial'])
+
+export function getSubscriptionStatus(subscription: Pick<Subscription, 'status'>): SubscriptionStatus {
+  return subscription.status ?? 'active'
+}
+
+export function isSubscriptionBillable(subscription: Pick<Subscription, 'status'>): boolean {
+  return BILLABLE_STATUSES.has(getSubscriptionStatus(subscription))
+}
+
+export function calculateMonthlyEquivalentAmount(
+  subscription: Pick<Subscription, 'amount' | 'billing_period' | 'status'>
+): number {
+  if (!isSubscriptionBillable(subscription)) {
+    return 0
+  }
+
+  const amount = Number(subscription.amount)
+  return subscription.billing_period === 'yearly' ? amount / 12 : amount
+}
+
+export function calculateYearlyAmount(
+  subscription: Pick<Subscription, 'amount' | 'billing_period' | 'status'>
+): number {
+  if (!isSubscriptionBillable(subscription)) {
+    return 0
+  }
+
+  const amount = Number(subscription.amount)
+  return subscription.billing_period === 'monthly' ? amount * 12 : amount
+}
+
+export function calculateMonthlyEquivalentTotal(subscriptions: Subscription[]): number {
+  return subscriptions.reduce(
+    (total, subscription) => total + calculateMonthlyEquivalentAmount(subscription),
+    0
+  )
+}
+
+export function calculateYearlyTotal(subscriptions: Subscription[]): number {
+  return subscriptions.reduce(
+    (total, subscription) => total + calculateYearlyAmount(subscription),
+    0
+  )
+}
+
+export function calculateDueTotalForMonth(
+  subscriptions: Subscription[],
+  targetDate = new Date(),
+  referenceDate = startOfMonth(targetDate)
+): number {
+  const monthStart = startOfMonth(targetDate)
+  const monthEnd = endOfMonth(targetDate)
 
   return subscriptions.reduce((total, sub) => {
-    const nextPaymentDate = new Date(sub.next_payment_date)
-    
-    // Check if payment falls within current month
-    if (isWithinInterval(nextPaymentDate, { start: monthStart, end: monthEnd })) {
-      if (sub.billing_period === 'monthly') {
-        return total + Number(sub.amount)
-      } else if (sub.billing_period === 'yearly') {
-        // Convert yearly to monthly
-        return total + Number(sub.amount) / 12
-      }
+    if (!isSubscriptionBillable(sub)) {
+      return total
     }
-    
+
+    const nextPaymentDate = calculateUpcomingPaymentDate(
+      new Date(sub.next_payment_date),
+      sub.billing_period,
+      referenceDate
+    )
+
+    if (isWithinInterval(nextPaymentDate, { start: monthStart, end: monthEnd })) {
+      return total + Number(sub.amount)
+    }
+
     return total
   }, 0)
 }
 
+export function calculateMonthlyTotal(subscriptions: Subscription[]): number {
+  // Current-month upcoming payments, not normalized monthly average.
+  return calculateDueTotalForMonth(subscriptions)
+}
+
+export function getBillableSubscriptions(subscriptions: Subscription[]): Subscription[] {
+  return subscriptions.filter(isSubscriptionBillable)
+}
+
+export function calculateAverageMonthlyPerSubscription(subscriptions: Subscription[]): number {
+  const billableSubscriptions = getBillableSubscriptions(subscriptions)
+  if (billableSubscriptions.length === 0) {
+    return 0
+  }
+
+  return calculateMonthlyEquivalentTotal(billableSubscriptions) / billableSubscriptions.length
+}
+
 export function calculateNextPaymentDate(
   currentDate: Date,
-  billingPeriod: 'monthly' | 'yearly'
+  billingPeriod: BillingPeriod
 ): Date {
   if (billingPeriod === 'monthly') {
     return addMonths(currentDate, 1)
@@ -38,7 +109,7 @@ export function calculateNextPaymentDate(
 
 export function calculateUpcomingPaymentDate(
   currentDate: Date,
-  billingPeriod: 'monthly' | 'yearly',
+  billingPeriod: BillingPeriod,
   referenceDate = new Date()
 ): Date {
   let nextPaymentDate = currentDate
@@ -49,6 +120,39 @@ export function calculateUpcomingPaymentDate(
   }
 
   return nextPaymentDate
+}
+
+export function calculateUpcomingPaymentDateForSubscription(
+  subscription: Pick<Subscription, 'next_payment_date' | 'billing_period'>,
+  referenceDate = new Date()
+): Date {
+  return calculateUpcomingPaymentDate(
+    new Date(subscription.next_payment_date),
+    subscription.billing_period,
+    referenceDate
+  )
+}
+
+export function calculateLegacyMonthlyTotal(subscriptions: Subscription[]): number {
+  const now = new Date()
+  const monthStart = startOfMonth(now)
+  const monthEnd = endOfMonth(now)
+
+  return subscriptions.reduce((total, sub) => {
+    const nextPaymentDate = new Date(sub.next_payment_date)
+
+    // Check if payment falls within current month
+    if (isWithinInterval(nextPaymentDate, { start: monthStart, end: monthEnd })) {
+      if (sub.billing_period === 'monthly') {
+        return total + Number(sub.amount)
+      } else if (sub.billing_period === 'yearly') {
+        // Convert yearly to monthly
+        return total + Number(sub.amount) / 12
+      }
+    }
+
+    return total
+  }, 0)
 }
 
 export function formatCurrency(amount: number, currency: string): string {

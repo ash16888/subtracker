@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useSubscriptions } from '../features/subscriptions/hooks/useSubscriptions'
-import { formatCurrency } from '../lib/utils/calculations'
+import { formatCurrency, getBillableSubscriptions } from '../lib/utils/calculations'
 import { format, addDays, startOfDay } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import type { Database } from '../types/database.types'
@@ -63,6 +63,10 @@ function PaymentGroup({ title, payments, bgColor, textColor }: {
 
 export function UpcomingPaymentsPage() {
   const { data: subscriptions = [] } = useSubscriptions()
+  const billableSubscriptions = useMemo(
+    () => getBillableSubscriptions(subscriptions),
+    [subscriptions]
+  )
 
   const paymentGroups = useMemo(() => {
     const now = new Date()
@@ -76,7 +80,7 @@ export function UpcomingPaymentsPage() {
       later: [] as Subscription[]
     }
 
-    subscriptions.forEach(sub => {
+    billableSubscriptions.forEach(sub => {
       const paymentDate = startOfDay(new Date(sub.next_payment_date))
       
       // Since auto-renewal is now implemented, all dates should be in the future
@@ -96,7 +100,7 @@ export function UpcomingPaymentsPage() {
     })
 
     return groupedPayments
-  }, [subscriptions])
+  }, [billableSubscriptions])
 
   const totalUpcoming = useMemo(() => {
     const allUpcoming = [
@@ -146,7 +150,7 @@ export function UpcomingPaymentsPage() {
         />
       </div>
 
-      {subscriptions.length === 0 && (
+      {billableSubscriptions.length === 0 && (
         <div className="bg-white rounded-lg shadow p-12 text-center">
           <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
             <svg className="w-12 h-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

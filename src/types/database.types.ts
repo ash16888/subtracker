@@ -17,10 +17,14 @@ export interface Database {
           currency: string
           billing_period: 'monthly' | 'yearly'
           next_payment_date: string
+          status: 'active' | 'trial' | 'paused' | 'canceled' | 'archived'
           category: string | null
           url: string | null
           user_id: string
           google_calendar_event_id: string | null
+          calendar_sync_status: 'not_connected' | 'pending' | 'synced' | 'error' | 'disabled'
+          calendar_sync_error: string | null
+          calendar_sync_attempted_at: string | null
           created_at: string
           updated_at: string
         }
@@ -31,10 +35,14 @@ export interface Database {
           currency: string
           billing_period: 'monthly' | 'yearly'
           next_payment_date: string
+          status?: 'active' | 'trial' | 'paused' | 'canceled' | 'archived'
           category?: string | null
           url?: string | null
           user_id: string
           google_calendar_event_id?: string | null
+          calendar_sync_status?: 'not_connected' | 'pending' | 'synced' | 'error' | 'disabled'
+          calendar_sync_error?: string | null
+          calendar_sync_attempted_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -45,10 +53,14 @@ export interface Database {
           currency?: string
           billing_period?: 'monthly' | 'yearly'
           next_payment_date?: string
+          status?: 'active' | 'trial' | 'paused' | 'canceled' | 'archived'
           category?: string | null
           url?: string | null
           user_id?: string
           google_calendar_event_id?: string | null
+          calendar_sync_status?: 'not_connected' | 'pending' | 'synced' | 'error' | 'disabled'
+          calendar_sync_error?: string | null
+          calendar_sync_attempted_at?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -63,6 +75,8 @@ export interface Database {
     }
     Enums: {
       billing_period: 'monthly' | 'yearly'
+      subscription_status: 'active' | 'trial' | 'paused' | 'canceled' | 'archived'
+      calendar_sync_status: 'not_connected' | 'pending' | 'synced' | 'error' | 'disabled'
     }
   }
 }
